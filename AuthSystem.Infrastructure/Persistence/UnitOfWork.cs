@@ -23,6 +23,7 @@ namespace AuthSystem.Infrastructure.Persistence
         private IUserRoleRepository _userRoleRepository;
         private IRolePermissionRepository _rolePermissionRepository;
         private IUserSessionRepository _userSessionRepository;
+        private IModuleRepository _moduleRepository;
 
         /// <summary>
         /// Constructor
@@ -64,6 +65,11 @@ namespace AuthSystem.Infrastructure.Persistence
         /// Repositorio de sesiones de usuario
         /// </summary>
         public IUserSessionRepository UserSessions => _userSessionRepository ??= new UserSessionRepository(_context);
+
+        /// <summary>
+        /// Repositorio de módulos
+        /// </summary>
+        public IModuleRepository Modules => _moduleRepository ??= new ModuleRepository(_context);
 
         /// <summary>
         /// Guarda los cambios en la base de datos

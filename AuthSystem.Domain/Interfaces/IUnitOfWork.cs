@@ -41,6 +41,11 @@ namespace AuthSystem.Domain.Interfaces
         IUserSessionRepository UserSessions { get; }
 
         /// <summary>
+        /// Repositorio de módulos
+        /// </summary>
+        IModuleRepository Modules { get; }
+
+        /// <summary>
         /// Guarda los cambios en la base de datos
         /// </summary>
         /// <param name="cancellationToken">Token de cancelación</param>

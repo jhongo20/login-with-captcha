@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba de Refresh Token</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+            max-height: 300px;
+            overflow: auto;
+        }
+        .token-info {
+            background-color: #f0f0f0;
+            padding: 10px;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+        }
+        .hidden {
+            display: none;
+        }
+        .note {
+            background-color: #ffffcc;
+            padding: 10px;
+            border: 1px solid #ffcc00;
+            margin-bottom: 20px;
+        }
+        .debug-info {
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 10px;
+            padding: 5px;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Prueba de Refresh Token</h1>
+    
+    <div class="note">
+        <h3>Instrucciones</h3>
+        <p>Esta página te permite probar el flujo completo de autenticación con refresh token:</p>
+        <ol>
+            <li>Inicia sesión con las credenciales proporcionadas</li>
+            <li>Una vez autenticado, puedes usar el botón "Refrescar Token" para obtener un nuevo token de acceso</li>
+            <li>Usa el botón "Cerrar Sesión" para invalidar el token de actualización</li>
+        </ol>
+    </div>
+    
+    <div id="login-section">
+        <h2>Iniciar Sesión</h2>
+        <form id="login-form">
+            <div class="form-group">
+                <label for="username">Usuario:</label>
+                <input type="text" id="username" name="username" value="admin" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Contraseña:</label>
+                <input type="password" id="password" name="password" value="Admin123!" required>
+            </div>
+            <button type="submit">Iniciar Sesión</button>
+        </form>
+    </div>
+    
+    <div id="token-section" class="hidden">
+        <h2>Gestión de Tokens</h2>
+        <div class="token-info" id="token-info">
+            <p>No hay información de token disponible.</p>
+        </div>
+        <div>
+            <button id="refresh-token-btn">Refrescar Token</button>
+            <button id="logout-btn">Cerrar Sesión</button>
+        </div>
+    </div>
+    
+    <div id="token-result" class="result hidden"></div>
+    
+    <script>
+        // Elementos del DOM
+        const loginForm = document.getElementById('login-form');
+        const tokenSection = document.getElementById('token-section');
+        const tokenInfo = document.getElementById('token-info');
+        const tokenResult = document.getElementById('token-result');
+        const refreshTokenBtn = document.getElementById('refresh-token-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        
+        // Variables para almacenar los tokens
+        let accessToken = '';
+        let refreshToken = '';
+        let tokenExpiry = 0;
+        let isLoggedIn = false;
+        
+        // API URL base
+        const API_BASE_URL = 'http://localhost:5033/api';
+        
+        // Función para iniciar sesión
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            const requestBody = {
+                username: username,
+                password: password,
+                isLdapUser: false
+            };
+            
+            try {
+                tokenResult.innerHTML = '<p>Iniciando sesión...</p>';
+                tokenResult.classList.remove('hidden');
+                
+                const response = await fetch(`${API_BASE_URL}/Auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Guardar tokens
+                    accessToken = data.token;
+                    refreshToken = data.refreshToken;
+                    tokenExpiry = Date.now() + (data.expiresIn || 3600) * 1000;
+                    isLoggedIn = true;
+                    
+                    // Actualizar UI
+                    tokenSection.classList.remove('hidden');
+                    updateTokenInfo(data);
+                    
+                    tokenResult.innerHTML = `
+                        <h3>Inicio de sesión exitoso</h3>
+                        <p>Usuario: ${data.username}</p>
+                        <p>Email: ${data.email}</p>
+                        <p>Roles: ${data.roles.join(', ')}</p>
+                        <div class="debug-info">
+                            <p><strong>Access Token:</strong> ${accessToken.substring(0, 20)}...${accessToken.substring(accessToken.length - 10)}</p>
+                            <p><strong>Refresh Token:</strong> ${refreshToken.substring(0, 20)}...${refreshToken.substring(refreshToken.length - 10)}</p>
+                        </div>
+                    `;
+                } else {
+                    // Mostrar error
+                    tokenResult.innerHTML = `
+                        <h3>Error de inicio de sesión:</h3>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                tokenResult.innerHTML = `
+                    <h3>Error:</h3>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        });
+        
+        // Función para refrescar el token
+        refreshTokenBtn.addEventListener('click', async () => {
+            if (!isLoggedIn || !refreshToken) {
+                alert('Debes iniciar sesión primero');
+                return;
+            }
+            
+            const requestBody = {
+                refreshToken: refreshToken
+            };
+            
+            try {
+                tokenResult.innerHTML = '<p>Refrescando token...</p>';
+                tokenResult.classList.remove('hidden');
+                
+                const response = await fetch(`${API_BASE_URL}/Auth/refresh-token`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Actualizar tokens
+                    accessToken = data.token;
+                    refreshToken = data.refreshToken;
+                    tokenExpiry = Date.now() + (data.expiresIn || 3600) * 1000;
+                    
+                    // Actualizar información
+                    updateTokenInfo(data);
+                    
+                    tokenResult.innerHTML = `
+                        <h3>Token refrescado correctamente</h3>
+                        <p>Se ha generado un nuevo token de acceso.</p>
+                        <div class="debug-info">
+                            <p><strong>Nuevo Access Token:</strong> ${accessToken.substring(0, 20)}...${accessToken.substring(accessToken.length - 10)}</p>
+                            <p><strong>Nuevo Refresh Token:</strong> ${refreshToken.substring(0, 20)}...${refreshToken.substring(refreshToken.length - 10)}</p>
+                        </div>
+                    `;
+                } else {
+                    // Mostrar error
+                    tokenResult.innerHTML = `
+                        <h3>Error al refrescar token:</h3>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                tokenResult.innerHTML = `
+                    <h3>Error:</h3>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        });
+        
+        // Función para cerrar sesión
+        logoutBtn.addEventListener('click', async () => {
+            if (!isLoggedIn || !refreshToken) {
+                alert('Debes iniciar sesión primero');
+                return;
+            }
+            
+            const requestBody = {
+                refreshToken: refreshToken
+            };
+            
+            try {
+                tokenResult.innerHTML = '<p>Cerrando sesión...</p>';
+                tokenResult.classList.remove('hidden');
+                
+                const response = await fetch(`${API_BASE_URL}/Auth/logout`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Limpiar tokens
+                    accessToken = '';
+                    refreshToken = '';
+                    tokenExpiry = 0;
+                    isLoggedIn = false;
+                    
+                    // Actualizar UI
+                    tokenSection.classList.add('hidden');
+                    tokenInfo.innerHTML = '<p>No hay información de token disponible.</p>';
+                    
+                    tokenResult.innerHTML = `
+                        <h3>Sesión cerrada correctamente</h3>
+                        <p>${data.message}</p>
+                    `;
+                } else {
+                    // Mostrar error
+                    tokenResult.innerHTML = `
+                        <h3>Error al cerrar sesión:</h3>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                tokenResult.innerHTML = `
+                    <h3>Error:</h3>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        });
+        
+        // Función para actualizar la información del token
+        function updateTokenInfo(data) {
+            const expiryDate = new Date(tokenExpiry);
+            const timeRemaining = Math.max(0, Math.floor((tokenExpiry - Date.now()) / 1000));
+            
+            tokenInfo.innerHTML = `
+                <h3>Información del Token</h3>
+                <p><strong>Usuario:</strong> ${data.username}</p>
+                <p><strong>Email:</strong> ${data.email}</p>
+                <p><strong>Roles:</strong> ${data.roles.join(', ')}</p>
+                <p><strong>Expira:</strong> ${expiryDate.toLocaleString()} (${timeRemaining} segundos)</p>
+            `;
+        }
+    </script>
+</body>
+</html>

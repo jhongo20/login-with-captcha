@@ -55,6 +55,11 @@ namespace AuthSystem.Infrastructure.Persistence
         public DbSet<UserSession> UserSessions { get; set; }
 
         /// <summary>
+        /// Módulos
+        /// </summary>
+        public DbSet<Module> Modules { get; set; }
+
+        /// <summary>
         /// Configuración del modelo
         /// </summary>
         /// <param name="modelBuilder">Constructor de modelos</param>
@@ -166,6 +171,26 @@ namespace AuthSystem.Infrastructure.Persistence
                 entity.HasIndex(e => e.RefreshToken).IsUnique();
             });
 
+            modelBuilder.Entity<Module>(entity =>
+            {
+                entity.ToTable("Modules");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.Description).HasMaxLength(200);
+                entity.Property(e => e.Route).HasMaxLength(200);
+                entity.Property(e => e.Icon).HasMaxLength(50);
+                entity.Property(e => e.CreatedBy).HasMaxLength(50);
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(50);
+
+                entity.HasIndex(e => e.Name).IsUnique();
+                entity.HasIndex(e => e.ParentId);
+
+                entity.HasOne(e => e.Parent)
+                    .WithMany()
+                    .HasForeignKey(e => e.ParentId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
             // Configuración de datos semilla
             SeedData(modelBuilder);
         }
@@ -176,9 +201,112 @@ namespace AuthSystem.Infrastructure.Persistence
         /// <param name="modelBuilder">Constructor de modelos</param>
         private void SeedData(ModelBuilder modelBuilder)
         {
+            SeedRoles(modelBuilder);
+            SeedPermissions(modelBuilder);
+            SeedUsers(modelBuilder);
+            SeedUserRoles(modelBuilder);
+            SeedRolePermissions(modelBuilder);
+            SeedModules(modelBuilder);
+        }
+
+        private void SeedModules(ModelBuilder modelBuilder)
+        {
+            // Módulo principal: Dashboard
+            var dashboardId = Guid.NewGuid();
+            modelBuilder.Entity<Module>().HasData(new Module
+            {
+                Id = dashboardId,
+                Name = "Dashboard",
+                Description = "Panel principal del sistema",
+                Route = "/dashboard",
+                Icon = "fa-tachometer-alt",
+                DisplayOrder = 1,
+                ParentId = null,
+                IsEnabled = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "System",
+                LastModifiedAt = DateTime.UtcNow,
+                LastModifiedBy = "System"
+            });
+
+            // Módulo principal: Administración
+            var adminModuleId = Guid.NewGuid();
+            modelBuilder.Entity<Module>().HasData(new Module
+            {
+                Id = adminModuleId,
+                Name = "Administración",
+                Description = "Módulo de administración del sistema",
+                Route = "/admin",
+                Icon = "fa-cogs",
+                DisplayOrder = 2,
+                ParentId = null,
+                IsEnabled = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "System",
+                LastModifiedAt = DateTime.UtcNow,
+                LastModifiedBy = "System"
+            });
+
+            // Submódulo: Usuarios (hijo de Administración)
+            var usersModuleId = Guid.NewGuid();
+            modelBuilder.Entity<Module>().HasData(new Module
+            {
+                Id = usersModuleId,
+                Name = "Usuarios",
+                Description = "Gestión de usuarios del sistema",
+                Route = "/admin/users",
+                Icon = "fa-users",
+                DisplayOrder = 1,
+                ParentId = adminModuleId,
+                IsEnabled = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "System",
+                LastModifiedAt = DateTime.UtcNow,
+                LastModifiedBy = "System"
+            });
+
+            // Submódulo: Roles (hijo de Administración)
+            var rolesModuleId = Guid.NewGuid();
+            modelBuilder.Entity<Module>().HasData(new Module
+            {
+                Id = rolesModuleId,
+                Name = "Roles",
+                Description = "Gestión de roles y permisos",
+                Route = "/admin/roles",
+                Icon = "fa-user-shield",
+                DisplayOrder = 2,
+                ParentId = adminModuleId,
+                IsEnabled = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "System",
+                LastModifiedAt = DateTime.UtcNow,
+                LastModifiedBy = "System"
+            });
+
+            // Módulo principal: Reportes
+            var reportsModuleId = Guid.NewGuid();
+            modelBuilder.Entity<Module>().HasData(new Module
+            {
+                Id = reportsModuleId,
+                Name = "Reportes",
+                Description = "Módulo de reportes y estadísticas",
+                Route = "/reports",
+                Icon = "fa-chart-bar",
+                DisplayOrder = 3,
+                ParentId = null,
+                IsEnabled = true,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = "System",
+                LastModifiedAt = DateTime.UtcNow,
+                LastModifiedBy = "System"
+            });
+        }
+
+        private void SeedRoles(ModelBuilder modelBuilder)
+        {
             // Roles predeterminados
-            var adminRoleId = Guid.NewGuid();
-            var userRoleId = Guid.NewGuid();
+            var adminRoleId = Guid.Parse("d7e350e8-5fb7-4517-b8da-6f602d66a3a9");
+            var userRoleId = Guid.Parse("f7d36113-51ea-4448-a9d2-d9151d5ac28b");
 
             modelBuilder.Entity<Role>().HasData(
                 new Role
@@ -204,19 +332,28 @@ namespace AuthSystem.Infrastructure.Persistence
                     IsActive = true
                 }
             );
+        }
 
+        private void SeedPermissions(ModelBuilder modelBuilder)
+        {
             // Permisos predeterminados
-            var usersViewId = Guid.NewGuid();
-            var usersCreateId = Guid.NewGuid();
-            var usersEditId = Guid.NewGuid();
-            var usersDeleteId = Guid.NewGuid();
+            var usersViewId = Guid.Parse("2a1ccb43-fa4f-48ce-b148-32d3bd6dae19");
+            var usersCreateId = Guid.Parse("5c3a4a58-2c25-4a9d-b641-a7a35f9d3c95");
+            var usersEditId = Guid.Parse("7b073c81-8bcd-4a93-96e3-8ef64b87960f");
+            var usersDeleteId = Guid.Parse("a9bb2c4d-4c46-4eba-b27a-4b2127a0df5f");
+
+            // Permisos para módulos
+            var modulesViewId = Guid.Parse("c4f907db-0f34-4610-b3cc-9fd1c4d323e7");
+            var modulesCreateId = Guid.Parse("7b8e8c2f-d39a-4b1a-b11e-0e39d3b7d8f3");
+            var modulesEditId = Guid.Parse("e5d4c4f4-4a4f-4a4f-b0d1-302c9d40e00f");
+            var modulesDeleteId = Guid.Parse("f8b2c5d5-5a5a-5a5a-c0e2-413d4e51f11f");
 
             modelBuilder.Entity<Permission>().HasData(
                 new Permission
                 {
                     Id = usersViewId,
-                    Name = "users.view",
-                    Description = "Ver usuarios",
+                    Name = "Users.View",
+                    Description = "Permiso para ver usuarios",
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = "System",
                     LastModifiedBy = "System",
@@ -226,8 +363,8 @@ namespace AuthSystem.Infrastructure.Persistence
                 new Permission
                 {
                     Id = usersCreateId,
-                    Name = "users.create",
-                    Description = "Crear usuarios",
+                    Name = "Users.Create",
+                    Description = "Permiso para crear usuarios",
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = "System",
                     LastModifiedBy = "System",
@@ -237,8 +374,8 @@ namespace AuthSystem.Infrastructure.Persistence
                 new Permission
                 {
                     Id = usersEditId,
-                    Name = "users.edit",
-                    Description = "Editar usuarios",
+                    Name = "Users.Edit",
+                    Description = "Permiso para editar usuarios",
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = "System",
                     LastModifiedBy = "System",
@@ -248,8 +385,53 @@ namespace AuthSystem.Infrastructure.Persistence
                 new Permission
                 {
                     Id = usersDeleteId,
-                    Name = "users.delete",
-                    Description = "Eliminar usuarios",
+                    Name = "Users.Delete",
+                    Description = "Permiso para eliminar usuarios",
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
+                    LastModifiedAt = DateTime.UtcNow,
+                    IsActive = true
+                },
+                // Nuevos permisos para módulos
+                new Permission
+                {
+                    Id = modulesViewId,
+                    Name = "Modules.View",
+                    Description = "Permiso para ver módulos",
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
+                    LastModifiedAt = DateTime.UtcNow,
+                    IsActive = true
+                },
+                new Permission
+                {
+                    Id = modulesCreateId,
+                    Name = "Modules.Create",
+                    Description = "Permiso para crear módulos",
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
+                    LastModifiedAt = DateTime.UtcNow,
+                    IsActive = true
+                },
+                new Permission
+                {
+                    Id = modulesEditId,
+                    Name = "Modules.Edit",
+                    Description = "Permiso para editar módulos",
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
+                    LastModifiedAt = DateTime.UtcNow,
+                    IsActive = true
+                },
+                new Permission
+                {
+                    Id = modulesDeleteId,
+                    Name = "Modules.Delete",
+                    Description = "Permiso para eliminar módulos",
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = "System",
                     LastModifiedBy = "System",
@@ -257,68 +439,12 @@ namespace AuthSystem.Infrastructure.Persistence
                     IsActive = true
                 }
             );
+        }
 
-            // Asignar permisos a roles
-            modelBuilder.Entity<RolePermission>().HasData(
-                new RolePermission
-                {
-                    Id = Guid.NewGuid(),
-                    RoleId = adminRoleId,
-                    PermissionId = usersViewId,
-                    CreatedAt = DateTime.UtcNow,
-                    CreatedBy = "System",
-                    LastModifiedBy = "System",
-                    LastModifiedAt = DateTime.UtcNow,
-                    IsActive = true
-                },
-                new RolePermission
-                {
-                    Id = Guid.NewGuid(),
-                    RoleId = adminRoleId,
-                    PermissionId = usersCreateId,
-                    CreatedAt = DateTime.UtcNow,
-                    CreatedBy = "System",
-                    LastModifiedBy = "System",
-                    LastModifiedAt = DateTime.UtcNow,
-                    IsActive = true
-                },
-                new RolePermission
-                {
-                    Id = Guid.NewGuid(),
-                    RoleId = adminRoleId,
-                    PermissionId = usersEditId,
-                    CreatedAt = DateTime.UtcNow,
-                    CreatedBy = "System",
-                    LastModifiedBy = "System",
-                    LastModifiedAt = DateTime.UtcNow,
-                    IsActive = true
-                },
-                new RolePermission
-                {
-                    Id = Guid.NewGuid(),
-                    RoleId = adminRoleId,
-                    PermissionId = usersDeleteId,
-                    CreatedAt = DateTime.UtcNow,
-                    CreatedBy = "System",
-                    LastModifiedBy = "System",
-                    LastModifiedAt = DateTime.UtcNow,
-                    IsActive = true
-                },
-                new RolePermission
-                {
-                    Id = Guid.NewGuid(),
-                    RoleId = userRoleId,
-                    PermissionId = usersViewId,
-                    CreatedAt = DateTime.UtcNow,
-                    CreatedBy = "System",
-                    LastModifiedBy = "System",
-                    LastModifiedAt = DateTime.UtcNow,
-                    IsActive = true
-                }
-            );
-
+        private void SeedUsers(ModelBuilder modelBuilder)
+        {
             // Usuario administrador predeterminado
-            var adminId = Guid.NewGuid();
+            var adminId = Guid.Parse("bcab4262-01ff-410f-9948-179b1cf9154b");
             modelBuilder.Entity<User>().HasData(
                 new User
                 {
@@ -342,14 +468,141 @@ namespace AuthSystem.Infrastructure.Persistence
                     IsActive = true
                 }
             );
+        }
 
+        private void SeedUserRoles(ModelBuilder modelBuilder)
+        {
             // Asignar rol de administrador al usuario administrador
             modelBuilder.Entity<UserRole>().HasData(
                 new UserRole
                 {
                     Id = Guid.NewGuid(),
-                    UserId = adminId,
-                    RoleId = adminRoleId,
+                    UserId = Guid.Parse("bcab4262-01ff-410f-9948-179b1cf9154b"), // ID del usuario admin
+                    RoleId = Guid.Parse("d7e350e8-5fb7-4517-b8da-6f602d66a3a9"), // ID del rol admin
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
+                    LastModifiedAt = DateTime.UtcNow,
+                    IsActive = true
+                }
+            );
+        }
+
+        private void SeedRolePermissions(ModelBuilder modelBuilder)
+        {
+            // Asignar permisos a roles
+            var adminRoleId = Guid.Parse("d7e350e8-5fb7-4517-b8da-6f602d66a3a9");
+            var userRoleId = Guid.Parse("f7d36113-51ea-4448-a9d2-d9151d5ac28b");
+
+            // Permisos de usuarios
+            var usersViewId = Guid.Parse("2a1ccb43-fa4f-48ce-b148-32d3bd6dae19");
+            var usersCreateId = Guid.Parse("5c3a4a58-2c25-4a9d-b641-a7a35f9d3c95");
+            var usersEditId = Guid.Parse("7b073c81-8bcd-4a93-96e3-8ef64b87960f");
+            var usersDeleteId = Guid.Parse("a9bb2c4d-4c46-4eba-b27a-4b2127a0df5f");
+
+            // Permisos de módulos
+            var modulesViewId = Guid.Parse("c4f907db-0f34-4610-b3cc-9fd1c4d323e7");
+            var modulesCreateId = Guid.Parse("7b8e8c2f-d39a-4b1a-b11e-0e39d3b7d8f3");
+            var modulesEditId = Guid.Parse("e5d4c4f4-4a4f-4a4f-b0d1-302c9d40e00f");
+            var modulesDeleteId = Guid.Parse("f8b2c5d5-5a5a-5a5a-c0e2-413d4e51f11f");
+
+            modelBuilder.Entity<RolePermission>().HasData(
+                // Permisos de usuarios para el rol Admin
+                new RolePermission
+                {
+                    Id = Guid.NewGuid(),
+                    RoleId = adminRoleId, // ID del rol admin
+                    PermissionId = usersViewId, // ID del permiso de ver usuarios
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
+                    LastModifiedAt = DateTime.UtcNow,
+                    IsActive = true
+                },
+                new RolePermission
+                {
+                    Id = Guid.NewGuid(),
+                    RoleId = adminRoleId, // ID del rol admin
+                    PermissionId = usersCreateId, // ID del permiso de crear usuarios
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
+                    LastModifiedAt = DateTime.UtcNow,
+                    IsActive = true
+                },
+                new RolePermission
+                {
+                    Id = Guid.NewGuid(),
+                    RoleId = adminRoleId, // ID del rol admin
+                    PermissionId = usersEditId, // ID del permiso de editar usuarios
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
+                    LastModifiedAt = DateTime.UtcNow,
+                    IsActive = true
+                },
+                new RolePermission
+                {
+                    Id = Guid.NewGuid(),
+                    RoleId = adminRoleId, // ID del rol admin
+                    PermissionId = usersDeleteId, // ID del permiso de eliminar usuarios
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
+                    LastModifiedAt = DateTime.UtcNow,
+                    IsActive = true
+                },
+                // Permiso de ver usuarios para el rol User
+                new RolePermission
+                {
+                    Id = Guid.NewGuid(),
+                    RoleId = userRoleId, // ID del rol user
+                    PermissionId = usersViewId, // ID del permiso de ver usuarios
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
+                    LastModifiedAt = DateTime.UtcNow,
+                    IsActive = true
+                },
+                // Permisos de módulos para el rol Admin
+                new RolePermission
+                {
+                    Id = Guid.NewGuid(),
+                    RoleId = adminRoleId, // ID del rol admin
+                    PermissionId = modulesViewId, // ID del permiso de ver módulos
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
+                    LastModifiedAt = DateTime.UtcNow,
+                    IsActive = true
+                },
+                new RolePermission
+                {
+                    Id = Guid.NewGuid(),
+                    RoleId = adminRoleId, // ID del rol admin
+                    PermissionId = modulesCreateId, // ID del permiso de crear módulos
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
+                    LastModifiedAt = DateTime.UtcNow,
+                    IsActive = true
+                },
+                new RolePermission
+                {
+                    Id = Guid.NewGuid(),
+                    RoleId = adminRoleId, // ID del rol admin
+                    PermissionId = modulesEditId, // ID del permiso de editar módulos
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = "System",
+                    LastModifiedBy = "System",
+                    LastModifiedAt = DateTime.UtcNow,
+                    IsActive = true
+                },
+                new RolePermission
+                {
+                    Id = Guid.NewGuid(),
+                    RoleId = adminRoleId, // ID del rol admin
+                    PermissionId = modulesDeleteId, // ID del permiso de eliminar módulos
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = "System",
                     LastModifiedBy = "System",

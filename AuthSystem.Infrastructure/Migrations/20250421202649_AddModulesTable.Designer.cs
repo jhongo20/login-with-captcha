@@ -4,6 +4,7 @@ using AuthSystem.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AuthSystem.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250421202649_AddModulesTable")]
+    partial class AddModulesTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -46,8 +49,7 @@ namespace AuthSystem.Infrastructure.Migrations
 
                     b.Property<string>("Icon")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -62,9 +64,6 @@ namespace AuthSystem.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<Guid?>("ModuleId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -75,18 +74,16 @@ namespace AuthSystem.Infrastructure.Migrations
 
                     b.Property<string>("Route")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedBy")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ModuleId");
 
                     b.HasIndex("Name")
                         .IsUnique();
@@ -94,85 +91,6 @@ namespace AuthSystem.Infrastructure.Migrations
                     b.HasIndex("ParentId");
 
                     b.ToTable("Modules", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("70d4253b-8b9f-4c90-871b-98c4073050fd"),
-                            CreatedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(7108),
-                            CreatedBy = "System",
-                            Description = "Panel principal del sistema",
-                            DisplayOrder = 1,
-                            Icon = "fa-tachometer-alt",
-                            IsActive = true,
-                            IsEnabled = true,
-                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(7108),
-                            LastModifiedBy = "System",
-                            Name = "Dashboard",
-                            Route = "/dashboard"
-                        },
-                        new
-                        {
-                            Id = new Guid("da9d9c11-b242-4c9b-8611-8eb008765bec"),
-                            CreatedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(7143),
-                            CreatedBy = "System",
-                            Description = "Módulo de administración del sistema",
-                            DisplayOrder = 2,
-                            Icon = "fa-cogs",
-                            IsActive = true,
-                            IsEnabled = true,
-                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(7143),
-                            LastModifiedBy = "System",
-                            Name = "Administración",
-                            Route = "/admin"
-                        },
-                        new
-                        {
-                            Id = new Guid("69a19da5-b2c6-4a75-91ca-843f00caa2e9"),
-                            CreatedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(7185),
-                            CreatedBy = "System",
-                            Description = "Gestión de usuarios del sistema",
-                            DisplayOrder = 1,
-                            Icon = "fa-users",
-                            IsActive = true,
-                            IsEnabled = true,
-                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(7186),
-                            LastModifiedBy = "System",
-                            Name = "Usuarios",
-                            ParentId = new Guid("da9d9c11-b242-4c9b-8611-8eb008765bec"),
-                            Route = "/admin/users"
-                        },
-                        new
-                        {
-                            Id = new Guid("876d50d8-c17a-41b9-8317-0de67c6ceba9"),
-                            CreatedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(7216),
-                            CreatedBy = "System",
-                            Description = "Gestión de roles y permisos",
-                            DisplayOrder = 2,
-                            Icon = "fa-user-shield",
-                            IsActive = true,
-                            IsEnabled = true,
-                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(7216),
-                            LastModifiedBy = "System",
-                            Name = "Roles",
-                            ParentId = new Guid("da9d9c11-b242-4c9b-8611-8eb008765bec"),
-                            Route = "/admin/roles"
-                        },
-                        new
-                        {
-                            Id = new Guid("090e0db3-8ee2-4729-9095-fc358fbee9bf"),
-                            CreatedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(7269),
-                            CreatedBy = "System",
-                            Description = "Módulo de reportes y estadísticas",
-                            DisplayOrder = 3,
-                            Icon = "fa-chart-bar",
-                            IsActive = true,
-                            IsEnabled = true,
-                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(7270),
-                            LastModifiedBy = "System",
-                            Name = "Reportes",
-                            Route = "/reports"
-                        });
                 });
 
             modelBuilder.Entity("AuthSystem.Domain.Entities.Permission", b =>
@@ -219,45 +137,45 @@ namespace AuthSystem.Infrastructure.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("2a1ccb43-fa4f-48ce-b148-32d3bd6dae19"),
-                            CreatedAt = new DateTime(2025, 4, 21, 20, 44, 25, 819, DateTimeKind.Utc).AddTicks(8053),
+                            Id = new Guid("607d2005-63f7-4cfc-b9ab-b16077bf041c"),
+                            CreatedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(4045),
                             CreatedBy = "System",
                             Description = "Ver usuarios",
                             IsActive = true,
-                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 44, 25, 819, DateTimeKind.Utc).AddTicks(8054),
+                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(4046),
                             LastModifiedBy = "System",
                             Name = "users.view"
                         },
                         new
                         {
-                            Id = new Guid("5c3a4a58-2c25-4a9d-b641-a7a35f9d3c95"),
-                            CreatedAt = new DateTime(2025, 4, 21, 20, 44, 25, 819, DateTimeKind.Utc).AddTicks(8055),
+                            Id = new Guid("a5c08ec3-eeef-4910-8b15-3f9529c39a70"),
+                            CreatedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(4048),
                             CreatedBy = "System",
                             Description = "Crear usuarios",
                             IsActive = true,
-                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 44, 25, 819, DateTimeKind.Utc).AddTicks(8056),
+                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(4049),
                             LastModifiedBy = "System",
                             Name = "users.create"
                         },
                         new
                         {
-                            Id = new Guid("7b073c81-8bcd-4a93-96e3-8ef64b87960f"),
-                            CreatedAt = new DateTime(2025, 4, 21, 20, 44, 25, 819, DateTimeKind.Utc).AddTicks(8099),
+                            Id = new Guid("ffdaccc5-f1ed-446e-8166-878ee297d743"),
+                            CreatedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(4050),
                             CreatedBy = "System",
                             Description = "Editar usuarios",
                             IsActive = true,
-                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 44, 25, 819, DateTimeKind.Utc).AddTicks(8100),
+                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(4050),
                             LastModifiedBy = "System",
                             Name = "users.edit"
                         },
                         new
                         {
-                            Id = new Guid("a9bb2c4d-4c46-4eba-b27a-4b2127a0df5f"),
-                            CreatedAt = new DateTime(2025, 4, 21, 20, 44, 25, 819, DateTimeKind.Utc).AddTicks(8101),
+                            Id = new Guid("034726f0-f521-40ae-8208-a15628794e7d"),
+                            CreatedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(4052),
                             CreatedBy = "System",
                             Description = "Eliminar usuarios",
                             IsActive = true,
-                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 44, 25, 819, DateTimeKind.Utc).AddTicks(8102),
+                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(4052),
                             LastModifiedBy = "System",
                             Name = "users.delete"
                         });
@@ -308,22 +226,22 @@ namespace AuthSystem.Infrastructure.Migrations
                         new
                         {
                             Id = new Guid("d7e350e8-5fb7-4517-b8da-6f602d66a3a9"),
-                            CreatedAt = new DateTime(2025, 4, 21, 20, 44, 25, 819, DateTimeKind.Utc).AddTicks(7835),
+                            CreatedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(3877),
                             CreatedBy = "System",
                             Description = "Administrador del sistema",
                             IsActive = true,
-                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 44, 25, 819, DateTimeKind.Utc).AddTicks(7838),
+                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(3879),
                             LastModifiedBy = "System",
                             Name = "Admin"
                         },
                         new
                         {
-                            Id = new Guid("f7d36113-51ea-4448-a9d2-d9151d5ac28b"),
-                            CreatedAt = new DateTime(2025, 4, 21, 20, 44, 25, 819, DateTimeKind.Utc).AddTicks(7853),
+                            Id = new Guid("e1a8268c-d086-4098-aaf4-e326b3cd1dee"),
+                            CreatedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(3886),
                             CreatedBy = "System",
                             Description = "Usuario estándar",
                             IsActive = true,
-                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 44, 25, 819, DateTimeKind.Utc).AddTicks(7853),
+                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(3886),
                             LastModifiedBy = "System",
                             Name = "User"
                         });
@@ -371,58 +289,58 @@ namespace AuthSystem.Infrastructure.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("a3d9d72b-353d-4c3b-871c-c620c4d92247"),
-                            CreatedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(6799),
+                            Id = new Guid("bcaddc1f-c5da-48d0-8408-eccc202b9295"),
+                            CreatedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(4077),
                             CreatedBy = "System",
                             IsActive = true,
-                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(6800),
+                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(4078),
                             LastModifiedBy = "System",
-                            PermissionId = new Guid("2a1ccb43-fa4f-48ce-b148-32d3bd6dae19"),
+                            PermissionId = new Guid("607d2005-63f7-4cfc-b9ab-b16077bf041c"),
                             RoleId = new Guid("d7e350e8-5fb7-4517-b8da-6f602d66a3a9")
                         },
                         new
                         {
-                            Id = new Guid("e9ab943c-80fb-4335-ae12-102b8a669a40"),
-                            CreatedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(6803),
+                            Id = new Guid("f3714d9b-9721-447c-a6e7-33de247c806f"),
+                            CreatedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(4079),
                             CreatedBy = "System",
                             IsActive = true,
-                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(6804),
+                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(4080),
                             LastModifiedBy = "System",
-                            PermissionId = new Guid("5c3a4a58-2c25-4a9d-b641-a7a35f9d3c95"),
+                            PermissionId = new Guid("a5c08ec3-eeef-4910-8b15-3f9529c39a70"),
                             RoleId = new Guid("d7e350e8-5fb7-4517-b8da-6f602d66a3a9")
                         },
                         new
                         {
-                            Id = new Guid("91bc8cbb-8378-49b1-808a-c9ccc75a02b8"),
-                            CreatedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(6813),
+                            Id = new Guid("51aa030a-2ce2-400d-b6a5-d9d6cbb419d3"),
+                            CreatedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(4081),
                             CreatedBy = "System",
                             IsActive = true,
-                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(6814),
+                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(4082),
                             LastModifiedBy = "System",
-                            PermissionId = new Guid("7b073c81-8bcd-4a93-96e3-8ef64b87960f"),
+                            PermissionId = new Guid("ffdaccc5-f1ed-446e-8166-878ee297d743"),
                             RoleId = new Guid("d7e350e8-5fb7-4517-b8da-6f602d66a3a9")
                         },
                         new
                         {
-                            Id = new Guid("f7f06804-7088-4e7b-ad1a-f6b7251df0f2"),
-                            CreatedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(6819),
+                            Id = new Guid("6cf33b76-46cd-4420-9c51-f0ffac6486a4"),
+                            CreatedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(4083),
                             CreatedBy = "System",
                             IsActive = true,
-                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(6819),
+                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(4084),
                             LastModifiedBy = "System",
-                            PermissionId = new Guid("a9bb2c4d-4c46-4eba-b27a-4b2127a0df5f"),
+                            PermissionId = new Guid("034726f0-f521-40ae-8208-a15628794e7d"),
                             RoleId = new Guid("d7e350e8-5fb7-4517-b8da-6f602d66a3a9")
                         },
                         new
                         {
-                            Id = new Guid("4ff9de14-94a3-4726-9181-aff62299d437"),
-                            CreatedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(6898),
+                            Id = new Guid("d723e258-3efb-4a82-958a-524c44f98ea2"),
+                            CreatedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(4085),
                             CreatedBy = "System",
                             IsActive = true,
-                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(6899),
+                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 26, 49, 130, DateTimeKind.Utc).AddTicks(4086),
                             LastModifiedBy = "System",
-                            PermissionId = new Guid("2a1ccb43-fa4f-48ce-b148-32d3bd6dae19"),
-                            RoleId = new Guid("f7d36113-51ea-4448-a9d2-d9151d5ac28b")
+                            PermissionId = new Guid("607d2005-63f7-4cfc-b9ab-b16077bf041c"),
+                            RoleId = new Guid("e1a8268c-d086-4098-aaf4-e326b3cd1dee")
                         });
                 });
 
@@ -537,19 +455,19 @@ namespace AuthSystem.Infrastructure.Migrations
                         {
                             Id = new Guid("bcab4262-01ff-410f-9948-179b1cf9154b"),
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "6e0e824a-9dc9-434d-bf76-9fd59f24ebd5",
-                            CreatedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(5781),
+                            ConcurrencyStamp = "2f24947e-db09-4b53-a116-03d93f03044f",
+                            CreatedAt = new DateTime(2025, 4, 21, 20, 26, 49, 238, DateTimeKind.Utc).AddTicks(3169),
                             CreatedBy = "System",
                             Email = "admin@example.com",
                             EmailConfirmed = true,
                             FullName = "Administrator",
                             IsActive = true,
-                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(5791),
+                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 26, 49, 238, DateTimeKind.Utc).AddTicks(3182),
                             LastModifiedBy = "System",
                             LockoutEnabled = true,
-                            PasswordHash = "$2a$11$LWuztS0wDjyf/g8vMaCS2.rsrRmLKD94nprEnpZr3VJvYlcWiqsk2",
+                            PasswordHash = "$2a$11$Hw4nzSysTUJHwhtGCo2CqeItVFtM0xCFUhZ5UUMdWtW7EABImD5A2",
                             PhoneNumberConfirmed = true,
-                            SecurityStamp = "39b570eb-fb1a-4a48-bf8c-44b73bd3c9ee",
+                            SecurityStamp = "667c1a71-e35f-494a-8782-d69cee647e58",
                             TwoFactorEnabled = false,
                             UserType = 1,
                             Username = "admin"
@@ -598,11 +516,11 @@ namespace AuthSystem.Infrastructure.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("e2475aa1-4ac9-44b3-bcb1-c50f08594af4"),
-                            CreatedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(6704),
+                            Id = new Guid("b071fca7-4389-4cc7-bed5-b8c695a1f4b6"),
+                            CreatedAt = new DateTime(2025, 4, 21, 20, 26, 49, 238, DateTimeKind.Utc).AddTicks(3769),
                             CreatedBy = "System",
                             IsActive = true,
-                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 44, 25, 957, DateTimeKind.Utc).AddTicks(6707),
+                            LastModifiedAt = new DateTime(2025, 4, 21, 20, 26, 49, 238, DateTimeKind.Utc).AddTicks(3770),
                             LastModifiedBy = "System",
                             RoleId = new Guid("d7e350e8-5fb7-4517-b8da-6f602d66a3a9"),
                             UserId = new Guid("bcab4262-01ff-410f-9948-179b1cf9154b")
@@ -669,14 +587,9 @@ namespace AuthSystem.Infrastructure.Migrations
 
             modelBuilder.Entity("AuthSystem.Domain.Entities.Module", b =>
                 {
-                    b.HasOne("AuthSystem.Domain.Entities.Module", null)
-                        .WithMany("Children")
-                        .HasForeignKey("ModuleId");
-
                     b.HasOne("AuthSystem.Domain.Entities.Module", "Parent")
-                        .WithMany()
-                        .HasForeignKey("ParentId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId");
 
                     b.Navigation("Parent");
                 });
