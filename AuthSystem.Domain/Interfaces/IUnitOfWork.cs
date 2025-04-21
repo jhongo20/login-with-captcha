@@ -46,6 +46,11 @@ namespace AuthSystem.Domain.Interfaces
         IModuleRepository Modules { get; }
 
         /// <summary>
+        /// Repositorio de rutas
+        /// </summary>
+        IRouteRepository Routes { get; }
+
+        /// <summary>
         /// Guarda los cambios en la base de datos
         /// </summary>
         /// <param name="cancellationToken">Token de cancelación</param>

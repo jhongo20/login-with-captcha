@@ -37,7 +37,7 @@ namespace AuthSystem.Domain.Interfaces.Services
             string email,
             IEnumerable<string> roles,
             IEnumerable<string> permissions,
-            IDictionary<string, string> additionalClaims = null,
+            IDictionary<string, string>? additionalClaims = null,
             int expirationMinutes = 60,
             CancellationToken cancellationToken = default);
 

@@ -60,6 +60,16 @@ namespace AuthSystem.Infrastructure.Persistence
         public DbSet<Module> Modules { get; set; }
 
         /// <summary>
+        /// Rutas
+        /// </summary>
+        public DbSet<Route> Routes { get; set; }
+
+        /// <summary>
+        /// Roles de ruta
+        /// </summary>
+        public DbSet<RoleRoute> RoleRoutes { get; set; }
+
+        /// <summary>
         /// Configuración del modelo
         /// </summary>
         /// <param name="modelBuilder">Constructor de modelos</param>
@@ -189,6 +199,47 @@ namespace AuthSystem.Infrastructure.Persistence
                     .WithMany()
                     .HasForeignKey(e => e.ParentId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Route>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.Path).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.HttpMethod).IsRequired().HasMaxLength(10);
+                entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100);
+
+                entity.HasOne(e => e.Module)
+                    .WithMany()
+                    .HasForeignKey(e => e.ModuleId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => e.ModuleId);
+
+                entity.HasIndex(e => new { e.Path, e.HttpMethod }).IsUnique();
+
+                entity.HasIndex(e => new { e.Name, e.ModuleId }).IsUnique();
+            });
+
+            modelBuilder.Entity<RoleRoute>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(100);
+
+                entity.HasOne(e => e.Role)
+                    .WithMany()
+                    .HasForeignKey(e => e.RoleId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Route)
+                    .WithMany(r => r.RoleRoutes)
+                    .HasForeignKey(e => e.RouteId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => new { e.RoleId, e.RouteId }).IsUnique();
             });
 
             // Configuración de datos semilla

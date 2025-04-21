@@ -36,7 +36,7 @@ namespace AuthSystem.Domain.Entities
         /// <summary>
         /// Indica si la sesión está activa
         /// </summary>
-        public bool IsActive { get; set; } = true;
+        public new bool IsActive { get; set; } = true;
 
         /// <summary>
         /// Fecha de la última actividad
