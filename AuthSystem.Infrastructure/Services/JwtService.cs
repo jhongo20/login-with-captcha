@@ -170,24 +170,56 @@ namespace AuthSystem.Infrastructure.Services
         {
             try
             {
+                // Generar un token de actualización aleatorio
                 var randomNumber = new byte[32];
                 using var rng = RandomNumberGenerator.Create();
                 rng.GetBytes(randomNumber);
                 var refreshToken = Convert.ToBase64String(randomNumber);
 
+                // Configurar la fecha de expiración
                 var refreshTokenExpiryDays = int.Parse(_configuration["Jwt:RefreshTokenExpiryDays"] ?? "7");
-                var expiresAt = DateTime.UtcNow.AddDays(refreshTokenExpiryDays);
+                var now = DateTime.UtcNow;
+                var expiresAt = now.AddDays(refreshTokenExpiryDays);
 
-                var userSession = new UserSession
+                try
                 {
-                    UserId = userId,
-                    RefreshToken = refreshToken,
-                    ExpiresAt = expiresAt,
-                    CreatedAt = DateTime.UtcNow,
-                    IsActive = true
-                };
+                    // Primero verificamos si ya existe una sesión activa para este usuario
+                    var existingSessions = await _userSessionRepository.GetByUserAsync(userId, true, cancellationToken);
+                    
+                    // Si ya existe una sesión activa, la invalidamos
+                    foreach (var session in existingSessions)
+                    {
+                        session.IsActive = false;
+                        session.LastModifiedAt = now;
+                        session.LastModifiedBy = "System";
+                    }
 
-                await _userSessionRepository.AddAsync(userSession, cancellationToken);
+                    // Creamos una nueva sesión con todas las propiedades requeridas
+                    var userSession = new UserSession
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = userId,
+                        RefreshToken = refreshToken,
+                        ExpiresAt = expiresAt,
+                        CreatedAt = now,
+                        CreatedBy = "System",
+                        LastModifiedAt = now,
+                        LastModifiedBy = "System",
+                        LastActivity = now,
+                        IsActive = true,
+                        IpAddress = "", // Valor por defecto
+                        DeviceInfo = "" // Valor por defecto
+                    };
+
+                    // Agregar la nueva sesión
+                    await _userSessionRepository.AddAsync(userSession, cancellationToken);
+                }
+                catch (Exception dbEx)
+                {
+                    _logger.LogError(dbEx, "Error al guardar la sesión de usuario en la base de datos");
+                    // Si hay un error al guardar en la base de datos, devolvemos el token de todos modos
+                    // para que el usuario pueda iniciar sesión, pero registramos el error
+                }
 
                 return refreshToken;
             }

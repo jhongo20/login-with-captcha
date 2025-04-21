@@ -151,6 +151,17 @@ namespace AuthSystem.API.Controllers
 
                 // Generar token de actualización
                 string refreshToken = await _jwtService.GenerateRefreshTokenAsync(user.Id);
+                
+                // Guardar los cambios en la base de datos para persistir la sesión
+                try
+                {
+                    await _unitOfWork.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error al guardar los cambios en la base de datos durante el login");
+                    // Continuamos con el proceso de login aunque haya un error al guardar el refresh token
+                }
 
                 return Ok(new AuthResponse
                 {
@@ -169,7 +180,7 @@ namespace AuthSystem.API.Controllers
                 _logger.LogError(ex, "Error al iniciar sesión");
                 return StatusCode(500, new ErrorResponse
                 {
-                    Message = "Error al procesar la solicitud de inicio de sesión"
+                    Message = "Error al procesar la solicitud de inicio de sesión: " + ex.Message + (ex.InnerException != null ? " Inner exception: " + ex.InnerException.Message : "")
                 });
             }
         }
@@ -308,7 +319,7 @@ namespace AuthSystem.API.Controllers
                 _logger.LogError(ex, "Error al iniciar sesión con Google reCAPTCHA");
                 return StatusCode(500, new ErrorResponse
                 {
-                    Message = "Error al procesar la solicitud de inicio de sesión: " + ex.Message
+                    Message = "Error al procesar la solicitud de inicio de sesión"
                 });
             }
         }
@@ -380,12 +391,16 @@ namespace AuthSystem.API.Controllers
 
                 // Generar nuevo token de actualización
                 string newRefreshToken = await _jwtService.GenerateRefreshTokenAsync(user.Id);
+                
+                // Guardar los cambios para persistir el nuevo token de actualización
+                await _unitOfWork.SaveChangesAsync();
 
                 // Actualizar la última actividad de la sesión
                 var userSession = await _unitOfWork.UserSessions.GetByRefreshTokenAsync(request.RefreshToken);
                 if (userSession != null)
                 {
                     await _unitOfWork.UserSessions.UpdateLastActivityAsync(userSession.Id);
+                    await _unitOfWork.SaveChangesAsync();
                 }
 
                 return Ok(new AuthResponse

@@ -73,10 +73,12 @@ namespace AuthSystem.Infrastructure.Persistence.Repositories
                 .Where(us => us.UserId == userId && us.IsActive && us.ExpiresAt > DateTime.UtcNow)
                 .ToListAsync(cancellationToken);
 
+            var now = DateTime.UtcNow;
             foreach (var session in sessions)
             {
                 session.IsActive = false;
-                session.LastModifiedAt = DateTime.UtcNow;
+                session.LastModifiedAt = now;
+                session.LastModifiedBy = "System";
             }
 
             return sessions.Count;
@@ -98,6 +100,8 @@ namespace AuthSystem.Infrastructure.Persistence.Repositories
             {
                 session.IsActive = false;
                 session.LastModifiedAt = now;
+                session.LastModifiedBy = "System";
+                session.LastActivity = now;
             }
 
             return expiredSessions.Count;
@@ -117,8 +121,12 @@ namespace AuthSystem.Infrastructure.Persistence.Repositories
                 return false;
             }
 
-            session.LastActivity = DateTime.UtcNow;
-            session.LastModifiedAt = DateTime.UtcNow;
+            var now = DateTime.UtcNow;
+            session.LastActivity = now;
+            session.LastModifiedAt = now;
+            session.LastModifiedBy = "System";
+            
+            // Nota: No guardamos los cambios aquí, se espera que el llamador lo haga
 
             return true;
         }
