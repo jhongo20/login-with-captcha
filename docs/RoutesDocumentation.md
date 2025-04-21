@@ -157,6 +157,46 @@ Obtiene todas las rutas asignadas a un rol específico.
   - **Código**: 404 Not Found
   - **Contenido**: Mensaje de error
 
+### Obtener rutas por módulo y rol
+
+Obtiene todas las rutas de un módulo específico a las que tiene acceso un rol determinado.
+
+- **URL**: `/api/Routes/byModuleAndRole/{moduleId}/{roleId}`
+- **Método**: `GET`
+- **Autenticación**: Requerida (Rol: Admin)
+- **Parámetros de URL**:
+  - `moduleId`: ID del módulo (Guid)
+  - `roleId`: ID del rol (Guid)
+- **Respuesta exitosa**:
+  - **Código**: 200 OK
+  - **Contenido**: Array de objetos RouteDto
+- **Respuesta de error**:
+  - **Código**: 404 Not Found
+  - **Contenido**: Mensaje de error
+
+**Ejemplo de respuesta exitosa**:
+```json
+[
+  {
+    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "name": "Listar Usuarios",
+    "description": "Obtiene todos los usuarios del sistema",
+    "path": "/api/Users",
+    "httpMethod": "GET",
+    "displayOrder": 1,
+    "requiresAuth": true,
+    "isEnabled": true,
+    "isActive": true,
+    "moduleId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "moduleName": "Usuarios",
+    "createdAt": "2025-04-21T10:00:00Z",
+    "createdBy": "admin",
+    "lastModifiedAt": "2025-04-21T10:00:00Z",
+    "lastModifiedBy": "admin"
+  }
+]
+```
+
 ### Crear una nueva ruta
 
 Crea una nueva ruta en el sistema.

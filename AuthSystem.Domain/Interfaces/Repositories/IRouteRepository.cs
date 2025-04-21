@@ -51,5 +51,10 @@ namespace AuthSystem.Domain.Interfaces.Repositories
         /// Revoca el acceso de un rol a una ruta
         /// </summary>
         Task RevokeRouteFromRoleAsync(Guid routeId, Guid roleId);
+
+        /// <summary>
+        /// Obtiene todas las rutas de un módulo específico a las que tiene acceso un rol
+        /// </summary>
+        Task<IEnumerable<Route>> GetRoutesByModuleAndRoleAsync(Guid moduleId, Guid roleId);
     }
 }

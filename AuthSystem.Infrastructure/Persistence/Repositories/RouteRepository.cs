@@ -159,5 +159,30 @@ namespace AuthSystem.Infrastructure.Persistence.Repositories
                 .Include(r => r.Module)
                 .FirstOrDefaultAsync(r => r.Id == id && r.IsActive);
         }
+
+        /// <summary>
+        /// Obtiene todas las rutas de un módulo específico a las que tiene acceso un rol
+        /// </summary>
+        public async Task<IEnumerable<Route>> GetRoutesByModuleAndRoleAsync(Guid moduleId, Guid roleId)
+        {
+            // Verificar que el módulo y el rol existen
+            var moduleExists = await _context.Modules.AnyAsync(m => m.Id == moduleId && m.IsActive);
+            var roleExists = await _context.Roles.AnyAsync(r => r.Id == roleId && r.IsActive);
+
+            if (!moduleExists || !roleExists)
+            {
+                return Enumerable.Empty<Route>();
+            }
+
+            // Obtener las rutas que pertenecen al módulo y están asignadas al rol
+            return await _context.RoleRoutes
+                .Where(rr => rr.RoleId == roleId && rr.IsActive)
+                .Include(rr => rr.Route)
+                .ThenInclude(r => r.Module)
+                .Select(rr => rr.Route)
+                .Where(r => r.ModuleId == moduleId && r.IsActive && r.IsEnabled)
+                .OrderBy(r => r.DisplayOrder)
+                .ToListAsync();
+        }
     }
 }

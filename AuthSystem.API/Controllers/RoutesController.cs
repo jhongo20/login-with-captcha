@@ -456,6 +456,49 @@ namespace AuthSystem.API.Controllers
         }
 
         /// <summary>
+        /// Obtiene todas las rutas de un módulo específico a las que tiene acceso un rol
+        /// </summary>
+        /// <param name="moduleId">ID del módulo</param>
+        /// <param name="roleId">ID del rol</param>
+        /// <returns>Lista de rutas del módulo a las que tiene acceso el rol</returns>
+        [HttpGet("byModuleAndRole/{moduleId}/{roleId}")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<IEnumerable<RouteDto>>> GetRoutesByModuleAndRole(Guid moduleId, Guid roleId)
+        {
+            try
+            {
+                // Verificar que el módulo existe
+                var module = await _unitOfWork.Modules.GetByIdAsync(moduleId);
+                if (module == null)
+                {
+                    return NotFound($"No se encontró el módulo con ID {moduleId}");
+                }
+
+                // Verificar que el rol existe
+                var role = await _unitOfWork.Roles.GetByIdAsync(roleId);
+                if (role == null)
+                {
+                    return NotFound($"No se encontró el rol con ID {roleId}");
+                }
+
+                // Obtener las rutas del módulo a las que tiene acceso el rol
+                var routes = await _unitOfWork.Routes.GetRoutesByModuleAndRoleAsync(moduleId, roleId);
+                var routeDtos = routes.Select(MapToDto).ToList();
+
+                return Ok(routeDtos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener las rutas del módulo {ModuleId} para el rol {RoleId}", moduleId, roleId);
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error al obtener las rutas del módulo para el rol");
+            }
+        }
+
+        /// <summary>
         /// Mapea una entidad Route a un DTO RouteDto
         /// </summary>
         private RouteDto MapToDto(AuthSystem.Domain.Entities.Route route)
