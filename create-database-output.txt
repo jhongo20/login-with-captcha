@@ -1,0 +1,28 @@
+Changed database context to 'AuthSystemNewDb'.
+
+(1 rows affected)
+
+(1 rows affected)
+
+(1 rows affected)
+
+(1 rows affected)
+
+(1 rows affected)
+
+(1 rows affected)
+
+(1 rows affected)
+
+(1 rows affected)
+
+(4 rows affected)
+
+(1 rows affected)
+
+(1 rows affected)
+
+(1 rows affected)
+
+(1 rows affected)
+Base de datos AuthSystemNewDb creada correctamente con todas las tablas y datos semilla.
