@@ -269,8 +269,12 @@ Authorization: Bearer {token}
 5. Verificar el módulo actual de la ruta (usando el endpoint `GET /api/Routes/{routeId}`)
 6. Asignar la ruta a un nuevo módulo (usando el endpoint `POST /api/Routes/assign-to-module`)
 7. Verificar que la ruta ahora está asignada al nuevo módulo
-8. Obtener las rutas del módulo para un rol específico (usando el endpoint `GET /api/Routes/byModuleAndRole/{moduleId}/{roleId}`)
-9. Verificar que la ruta aparece en la lista si el rol tiene acceso a ella
+8. Revocar la ruta del módulo (usando el endpoint `DELETE /api/Routes/revoke-from-module/{routeId}`)
+9. Verificar que la ruta ahora está asignada al módulo "Sin Asignar"
+10. Obtener las rutas sin módulo (usando el endpoint `GET /api/Routes/without-module`)
+11. Verificar que la ruta aparece en la lista de rutas sin módulo
+12. Obtener las rutas del módulo para un rol específico (usando el endpoint `GET /api/Routes/byModuleAndRole/{moduleId}/{roleId}`)
+13. Verificar que la ruta aparece en la lista si el rol tiene acceso a ella
 
 ### 3. Prueba de Autorización
 
@@ -387,6 +391,8 @@ Utilice esta lista para asegurarse de que todas las pruebas se han completado co
 - [ ] El endpoint POST /api/Modules/assign-to-role asigna correctamente un módulo a un rol
 - [ ] El endpoint DELETE /api/Modules/revoke-from-role/{roleId}/{moduleId} revoca correctamente un módulo de un rol
 - [ ] El endpoint POST /api/Routes/assign-to-module asigna correctamente una ruta a un módulo
+- [ ] El endpoint DELETE /api/Routes/revoke-from-module/{routeId} revoca correctamente una ruta de un módulo
+- [ ] El endpoint GET /api/Routes/without-module devuelve correctamente las rutas sin módulo
 - [ ] El endpoint GET /api/Routes/byModuleAndRole/{moduleId}/{roleId} devuelve las rutas correctas
 - [ ] Las validaciones de seguridad funcionan correctamente
 - [ ] Las pruebas unitarias pasan correctamente

@@ -65,5 +65,19 @@ namespace AuthSystem.Domain.Interfaces.Repositories
         /// <param name="userName">Nombre del usuario que realiza la asignación</param>
         /// <returns>Task</returns>
         Task AssignRouteToModuleAsync(Guid routeId, Guid moduleId, string userName);
+
+        /// <summary>
+        /// Revoca una ruta de un módulo (la desvincula)
+        /// </summary>
+        /// <param name="routeId">ID de la ruta</param>
+        /// <param name="userName">Nombre del usuario que realiza la revocación</param>
+        /// <returns>Task</returns>
+        Task RevokeRouteFromModuleAsync(Guid routeId, string userName);
+
+        /// <summary>
+        /// Obtiene todas las rutas que no están vinculadas a ningún módulo
+        /// </summary>
+        /// <returns>Lista de rutas sin módulo</returns>
+        Task<IEnumerable<Route>> GetRoutesWithoutModuleAsync();
     }
 }

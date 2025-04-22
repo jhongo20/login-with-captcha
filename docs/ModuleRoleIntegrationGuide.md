@@ -174,6 +174,118 @@ async function getRoutesByModuleAndRole(moduleId, roleId) {
 }
 ```
 
+### Ejemplo de Asignación de Ruta a Módulo
+
+```csharp
+// Asignar una ruta a un módulo
+public async Task<bool> AssignRouteToModule(Guid routeId, Guid moduleId, string token)
+{
+    try
+    {
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        
+        var request = new
+        {
+            RouteId = routeId,
+            ModuleId = moduleId
+        };
+        
+        var content = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
+        var response = await client.PostAsync($"{ApiBaseUrl}/api/Routes/assign-to-module", content);
+        
+        return response.IsSuccessStatusCode;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error al asignar la ruta al módulo: {ex.Message}");
+        return false;
+    }
+}
+```
+
+### Ejemplo de Revocación de Ruta de Módulo
+
+```csharp
+// Revocar una ruta de un módulo
+public async Task<bool> RevokeRouteFromModule(Guid routeId, string token)
+{
+    try
+    {
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        
+        var response = await client.DeleteAsync($"{ApiBaseUrl}/api/Routes/revoke-from-module/{routeId}");
+        
+        return response.IsSuccessStatusCode;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error al revocar la ruta del módulo: {ex.Message}");
+        return false;
+    }
+}
+```
+
+### Ejemplo de Obtención de Rutas sin Módulo
+
+```csharp
+// Obtener rutas sin módulo
+public async Task<List<RouteDto>> GetRoutesWithoutModule(string token)
+{
+    try
+    {
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        
+        var response = await client.GetAsync($"{ApiBaseUrl}/api/Routes/without-module");
+        
+        if (response.IsSuccessStatusCode)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            var routes = JsonSerializer.Deserialize<List<RouteDto>>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            
+            return routes;
+        }
+        
+        return new List<RouteDto>();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error al obtener las rutas sin módulo: {ex.Message}");
+        return new List<RouteDto>();
+    }
+}
+```
+
+### Ejemplo de Asignación de Módulo a Rol
+
+```javascript
+// Asignar un módulo a un rol
+async function assignModuleToRole(moduleId, roleId) {
+  const response = await fetch('http://localhost:5031/api/Modules/assign-to-role', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      moduleId: moduleId,
+      roleId: roleId
+    })
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Error: ${response.status}`);
+  }
+  
+  return await response.json();
+}
+```
+
 ## Ejemplo de Implementación en una Aplicación React
 
 A continuación se muestra un ejemplo de cómo implementar la gestión de módulos y roles en una aplicación React:

@@ -549,6 +549,73 @@ namespace AuthSystem.API.Controllers
         }
 
         /// <summary>
+        /// Revoca una ruta de un módulo (la desvincula)
+        /// </summary>
+        /// <param name="routeId">ID de la ruta</param>
+        /// <returns>Mensaje de confirmación</returns>
+        [HttpDelete("revoke-from-module/{routeId}")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult> RevokeRouteFromModule(Guid routeId)
+        {
+            try
+            {
+                // Verificar que la ruta existe
+                var route = await _unitOfWork.Routes.GetByIdAsync(routeId);
+                if (route == null)
+                {
+                    return NotFound($"No se encontró la ruta con ID {routeId}");
+                }
+
+                // Obtener el nombre de usuario del token
+                var userName = User.Identity.Name ?? "System";
+
+                // Revocar la ruta del módulo
+                await _unitOfWork.Routes.RevokeRouteFromModuleAsync(routeId, userName);
+
+                return Ok(new { message = $"Ruta desvinculada correctamente del módulo" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Error al desvincular la ruta {RouteId} del módulo", routeId);
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al desvincular la ruta {RouteId} del módulo", routeId);
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error al desvincular la ruta del módulo");
+            }
+        }
+
+        /// <summary>
+        /// Obtiene todas las rutas que no están vinculadas a ningún módulo
+        /// </summary>
+        /// <returns>Lista de rutas sin módulo</returns>
+        [HttpGet("without-module")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<IEnumerable<RouteDto>>> GetRoutesWithoutModule()
+        {
+            try
+            {
+                var routes = await _unitOfWork.Routes.GetRoutesWithoutModuleAsync();
+                var routeDtos = routes.Select(MapToDto).ToList();
+                return Ok(routeDtos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener las rutas sin módulo");
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error al obtener las rutas sin módulo");
+            }
+        }
+
+        /// <summary>
         /// Mapea una entidad Route a un DTO RouteDto
         /// </summary>
         private RouteDto MapToDto(AuthSystem.Domain.Entities.Route route)

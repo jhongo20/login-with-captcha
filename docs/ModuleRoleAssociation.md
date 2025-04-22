@@ -124,6 +124,24 @@ Asigna una ruta a un módulo específico.
 }
 ```
 
+### Revocar Ruta de Módulo
+
+```
+DELETE /api/Routes/revoke-from-module/{routeId}
+```
+
+Revoca una ruta de su módulo actual y la asigna al módulo "Sin Asignar". Si el módulo "Sin Asignar" no existe, se crea automáticamente.
+
+**Parámetros:**
+- `routeId` (Guid): ID de la ruta a revocar
+
+**Respuesta:**
+```json
+{
+  "message": "Ruta revocada correctamente del módulo"
+}
+```
+
 ### Obtener Rutas por Módulo y Rol
 
 ```
@@ -135,6 +153,32 @@ Devuelve todas las rutas de un módulo específico a las que tiene acceso un rol
 **Parámetros:**
 - `moduleId` (Guid): ID del módulo
 - `roleId` (Guid): ID del rol
+
+**Respuesta:**
+```json
+[
+  {
+    "id": "guid",
+    "name": "string",
+    "description": "string",
+    "path": "string",
+    "httpMethod": "string",
+    "displayOrder": 0,
+    "requiresAuth": true,
+    "isEnabled": true,
+    "moduleId": "guid",
+    "moduleName": "string"
+  }
+]
+```
+
+### Obtener Rutas sin Módulo
+
+```
+GET /api/Routes/without-module
+```
+
+Devuelve todas las rutas que no están vinculadas a ningún módulo o que están asignadas al módulo "Sin Asignar".
 
 **Respuesta:**
 ```json

@@ -216,5 +216,90 @@ namespace AuthSystem.Infrastructure.Persistence.Repositories
             _context.Routes.Update(route);
             await _context.SaveChangesAsync();
         }
+
+        /// <summary>
+        /// Revoca una ruta de un módulo (la desvincula)
+        /// </summary>
+        /// <param name="routeId">ID de la ruta</param>
+        /// <param name="userName">Nombre del usuario que realiza la revocación</param>
+        /// <returns>Task</returns>
+        public async Task RevokeRouteFromModuleAsync(Guid routeId, string userName)
+        {
+            // Verificar que la ruta existe
+            var route = await _context.Routes.FirstOrDefaultAsync(r => r.Id == routeId && r.IsActive);
+
+            if (route == null)
+            {
+                throw new InvalidOperationException($"La ruta con ID {routeId} no existe o no está activa");
+            }
+
+            // Verificar que la ruta está asignada a un módulo
+            if (route.ModuleId == Guid.Empty)
+            {
+                throw new InvalidOperationException($"La ruta con ID {routeId} no está asignada a ningún módulo");
+            }
+
+            // Obtener un módulo "Sin Asignar" o crear uno si no existe
+            var unassignedModule = await _context.Modules
+                .FirstOrDefaultAsync(m => m.Name == "Sin Asignar" && m.IsActive);
+
+            if (unassignedModule == null)
+            {
+                // Crear un módulo "Sin Asignar"
+                unassignedModule = new Domain.Entities.Module
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Sin Asignar",
+                    Description = "Módulo para rutas sin asignación",
+                    Route = "/unassigned",
+                    Icon = "fa-question-circle",
+                    DisplayOrder = 9999,
+                    IsEnabled = true,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = userName,
+                    LastModifiedAt = DateTime.UtcNow,
+                    LastModifiedBy = userName
+                };
+
+                await _context.Modules.AddAsync(unassignedModule);
+                await _context.SaveChangesAsync();
+            }
+
+            // Asignar la ruta al módulo "Sin Asignar"
+            route.ModuleId = unassignedModule.Id;
+            route.LastModifiedAt = DateTime.UtcNow;
+            route.LastModifiedBy = userName;
+
+            _context.Routes.Update(route);
+            await _context.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Obtiene todas las rutas que no están vinculadas a ningún módulo
+        /// </summary>
+        /// <returns>Lista de rutas sin módulo</returns>
+        public async Task<IEnumerable<Route>> GetRoutesWithoutModuleAsync()
+        {
+            // Obtener el módulo "Sin Asignar"
+            var unassignedModule = await _context.Modules
+                .FirstOrDefaultAsync(m => m.Name == "Sin Asignar" && m.IsActive);
+
+            if (unassignedModule == null)
+            {
+                // Si no existe el módulo "Sin Asignar", devolver rutas con ModuleId nulo o Guid.Empty
+                return await _context.Routes
+                    .Where(r => r.ModuleId == Guid.Empty && r.IsActive)
+                    .OrderBy(r => r.Name)
+                    .ToListAsync();
+            }
+
+            // Devolver rutas asignadas al módulo "Sin Asignar"
+            return await _context.Routes
+                .Where(r => r.ModuleId == unassignedModule.Id && r.IsActive)
+                .Include(r => r.Module)
+                .OrderBy(r => r.Name)
+                .ToListAsync();
+        }
     }
 }
