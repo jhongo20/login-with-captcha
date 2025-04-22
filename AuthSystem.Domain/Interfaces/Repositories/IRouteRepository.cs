@@ -56,5 +56,14 @@ namespace AuthSystem.Domain.Interfaces.Repositories
         /// Obtiene todas las rutas de un módulo específico a las que tiene acceso un rol
         /// </summary>
         Task<IEnumerable<Route>> GetRoutesByModuleAndRoleAsync(Guid moduleId, Guid roleId);
+
+        /// <summary>
+        /// Asigna una ruta a un módulo
+        /// </summary>
+        /// <param name="routeId">ID de la ruta</param>
+        /// <param name="moduleId">ID del módulo</param>
+        /// <param name="userName">Nombre del usuario que realiza la asignación</param>
+        /// <returns>Task</returns>
+        Task AssignRouteToModuleAsync(Guid routeId, Guid moduleId, string userName);
     }
 }

@@ -184,5 +184,37 @@ namespace AuthSystem.Infrastructure.Persistence.Repositories
                 .OrderBy(r => r.DisplayOrder)
                 .ToListAsync();
         }
+
+        /// <summary>
+        /// Asigna una ruta a un módulo
+        /// </summary>
+        /// <param name="routeId">ID de la ruta</param>
+        /// <param name="moduleId">ID del módulo</param>
+        /// <param name="userName">Nombre del usuario que realiza la asignación</param>
+        /// <returns>Task</returns>
+        public async Task AssignRouteToModuleAsync(Guid routeId, Guid moduleId, string userName)
+        {
+            // Verificar que la ruta y el módulo existen
+            var route = await _context.Routes.FirstOrDefaultAsync(r => r.Id == routeId && r.IsActive);
+            var module = await _context.Modules.FirstOrDefaultAsync(m => m.Id == moduleId && m.IsActive);
+
+            if (route == null)
+            {
+                throw new InvalidOperationException($"La ruta con ID {routeId} no existe o no está activa");
+            }
+
+            if (module == null)
+            {
+                throw new InvalidOperationException($"El módulo con ID {moduleId} no existe o no está activo");
+            }
+
+            // Actualizar el módulo de la ruta
+            route.ModuleId = moduleId;
+            route.LastModifiedAt = DateTime.UtcNow;
+            route.LastModifiedBy = userName;
+
+            _context.Routes.Update(route);
+            await _context.SaveChangesAsync();
+        }
     }
 }

@@ -126,6 +126,54 @@ async function revokeModuleFromRole(roleId, moduleId) {
 }
 ```
 
+### 6. Asignar una Ruta a un Módulo
+
+Para asignar una ruta a un módulo específico:
+
+```javascript
+async function assignRouteToModule(routeId, moduleId) {
+  const response = await fetch('http://localhost:5031/api/Routes/assign-to-module', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      routeId: routeId,
+      moduleId: moduleId
+    })
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Error: ${response.status}`);
+  }
+  
+  return await response.json();
+}
+```
+
+### 7. Obtener Rutas por Módulo y Rol
+
+Para obtener todas las rutas de un módulo específico a las que tiene acceso un rol:
+
+```javascript
+async function getRoutesByModuleAndRole(moduleId, roleId) {
+  const response = await fetch(`http://localhost:5031/api/Routes/byModuleAndRole/${moduleId}/${roleId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Error: ${response.status}`);
+  }
+  
+  return await response.json();
+}
+```
+
 ## Ejemplo de Implementación en una Aplicación React
 
 A continuación se muestra un ejemplo de cómo implementar la gestión de módulos y roles en una aplicación React:

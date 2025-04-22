@@ -221,7 +221,6 @@ namespace AuthSystem.API.Controllers
                     DisplayOrder = request.DisplayOrder,
                     RequiresAuth = request.RequiresAuth,
                     IsEnabled = request.IsEnabled,
-                    IsActive = true,
                     ModuleId = request.ModuleId,
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = userName,
@@ -485,7 +484,7 @@ namespace AuthSystem.API.Controllers
                     return NotFound($"No se encontró el rol con ID {roleId}");
                 }
 
-                // Obtener las rutas del módulo a las que tiene acceso el rol
+                // Obtener las rutas del módulo asignadas al rol
                 var routes = await _unitOfWork.Routes.GetRoutesByModuleAndRoleAsync(moduleId, roleId);
                 var routeDtos = routes.Select(MapToDto).ToList();
 
@@ -495,6 +494,57 @@ namespace AuthSystem.API.Controllers
             {
                 _logger.LogError(ex, "Error al obtener las rutas del módulo {ModuleId} para el rol {RoleId}", moduleId, roleId);
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error al obtener las rutas del módulo para el rol");
+            }
+        }
+
+        /// <summary>
+        /// Asigna una ruta a un módulo
+        /// </summary>
+        /// <param name="request">Datos de la asignación</param>
+        /// <returns>Mensaje de confirmación</returns>
+        [HttpPost("assign-to-module")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult> AssignRouteToModule([FromBody] AssignRouteToModuleRequest request)
+        {
+            try
+            {
+                // Verificar que la ruta existe
+                var route = await _unitOfWork.Routes.GetByIdAsync(request.RouteId);
+                if (route == null)
+                {
+                    return NotFound($"No se encontró la ruta con ID {request.RouteId}");
+                }
+
+                // Verificar que el módulo existe
+                var module = await _unitOfWork.Modules.GetByIdAsync(request.ModuleId);
+                if (module == null)
+                {
+                    return NotFound($"No se encontró el módulo con ID {request.ModuleId}");
+                }
+
+                // Verificar si la ruta ya está asignada al módulo
+                if (route.ModuleId == request.ModuleId)
+                {
+                    return BadRequest($"La ruta ya está asignada al módulo");
+                }
+
+                // Obtener el nombre de usuario del token
+                var userName = User.Identity.Name ?? "System";
+
+                // Asignar la ruta al módulo
+                await _unitOfWork.Routes.AssignRouteToModuleAsync(request.RouteId, request.ModuleId, userName);
+
+                return Ok(new { message = $"Ruta asignada correctamente al módulo" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al asignar la ruta {RouteId} al módulo {ModuleId}", request.RouteId, request.ModuleId);
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error al asignar la ruta al módulo");
             }
         }
 

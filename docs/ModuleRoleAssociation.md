@@ -101,6 +101,59 @@ Revoca el acceso de un rol a un módulo específico.
 }
 ```
 
+### Asignar Ruta a Módulo
+
+```
+POST /api/Routes/assign-to-module
+```
+
+Asigna una ruta a un módulo específico.
+
+**Cuerpo de la Solicitud:**
+```json
+{
+  "routeId": "guid",
+  "moduleId": "guid"
+}
+```
+
+**Respuesta:**
+```json
+{
+  "message": "Ruta asignada correctamente al módulo"
+}
+```
+
+### Obtener Rutas por Módulo y Rol
+
+```
+GET /api/Routes/byModuleAndRole/{moduleId}/{roleId}
+```
+
+Devuelve todas las rutas de un módulo específico a las que tiene acceso un rol.
+
+**Parámetros:**
+- `moduleId` (Guid): ID del módulo
+- `roleId` (Guid): ID del rol
+
+**Respuesta:**
+```json
+[
+  {
+    "id": "guid",
+    "name": "string",
+    "description": "string",
+    "path": "string",
+    "httpMethod": "string",
+    "displayOrder": 0,
+    "requiresAuth": true,
+    "isEnabled": true,
+    "moduleId": "guid",
+    "moduleName": "string"
+  }
+]
+```
+
 ## Implementación
 
 ### Repositorio de Módulos

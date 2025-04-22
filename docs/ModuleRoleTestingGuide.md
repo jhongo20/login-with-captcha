@@ -164,9 +164,91 @@ Authorization: Bearer {token}
 - Código de estado: 400 Bad Request
 - Cuerpo de respuesta: Mensaje indicando que el rol no tiene acceso al módulo
 
+### 4. Asignar Ruta a Módulo
+
+#### Caso de Prueba: Asignar una ruta a un módulo (caso exitoso)
+
+**Solicitud**:
+```
+POST /api/Routes/assign-to-module
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "routeId": "{routeId}",
+  "moduleId": "{moduleId}"
+}
+```
+
+**Resultado esperado**:
+- Código de estado: 200 OK
+- Cuerpo de respuesta: Mensaje de confirmación
+
+#### Caso de Prueba: Asignar una ruta ya asignada al módulo
+
+**Solicitud**:
+```
+POST /api/Routes/assign-to-module
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "routeId": "{routeId_ya_asignado}",
+  "moduleId": "{moduleId}"
+}
+```
+
+**Resultado esperado**:
+- Código de estado: 400 Bad Request
+- Cuerpo de respuesta: Mensaje indicando que la ruta ya está asignada al módulo
+
+#### Caso de Prueba: Asignar una ruta inexistente a un módulo
+
+**Solicitud**:
+```
+POST /api/Routes/assign-to-module
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "routeId": "{routeId_inexistente}",
+  "moduleId": "{moduleId}"
+}
+```
+
+**Resultado esperado**:
+- Código de estado: 404 Not Found
+- Cuerpo de respuesta: Mensaje indicando que la ruta no existe
+
+### 5. Obtener Rutas por Módulo y Rol
+
+#### Caso de Prueba: Obtener rutas para un módulo y rol específicos
+
+**Solicitud**:
+```
+GET /api/Routes/byModuleAndRole/{moduleId}/{roleId}
+Authorization: Bearer {token}
+```
+
+**Resultado esperado**:
+- Código de estado: 200 OK
+- Cuerpo de respuesta: Array de objetos RouteDto
+
+#### Caso de Prueba: Obtener rutas para un módulo inexistente
+
+**Solicitud**:
+```
+GET /api/Routes/byModuleAndRole/{moduleId_inexistente}/{roleId}
+Authorization: Bearer {token}
+```
+
+**Resultado esperado**:
+- Código de estado: 404 Not Found
+- Cuerpo de respuesta: Mensaje de error indicando que el módulo no existe
+
 ## Pruebas de Integración
 
-### 1. Flujo Completo de Asignación y Revocación
+### 1. Flujo Completo de Asignación y Revocación de Módulos a Roles
 
 1. Obtener la lista de roles disponibles
 2. Seleccionar un rol para las pruebas
@@ -178,7 +260,19 @@ Authorization: Bearer {token}
 8. Revocar el módulo del rol (usando el endpoint `DELETE /api/Modules/revoke-from-role/{roleId}/{moduleId}`)
 9. Verificar que el módulo ya no está asignado al rol
 
-### 2. Prueba de Autorización
+### 2. Flujo Completo de Asignación de Rutas a Módulos
+
+1. Obtener la lista de módulos disponibles
+2. Seleccionar un módulo para las pruebas
+3. Obtener la lista de rutas disponibles
+4. Seleccionar una ruta para las pruebas
+5. Verificar el módulo actual de la ruta (usando el endpoint `GET /api/Routes/{routeId}`)
+6. Asignar la ruta a un nuevo módulo (usando el endpoint `POST /api/Routes/assign-to-module`)
+7. Verificar que la ruta ahora está asignada al nuevo módulo
+8. Obtener las rutas del módulo para un rol específico (usando el endpoint `GET /api/Routes/byModuleAndRole/{moduleId}/{roleId}`)
+9. Verificar que la ruta aparece en la lista si el rol tiene acceso a ella
+
+### 3. Prueba de Autorización
 
 #### Caso de Prueba: Acceso sin autenticación
 
@@ -274,7 +368,6 @@ public async Task GetModulesByRoleAsync_WithValidRoleId_ReturnsModules()
         Assert.Equal(module.Id, result.First().Id);
     }
 }
-```
 
 ## Pruebas de Rendimiento
 
@@ -293,6 +386,8 @@ Utilice esta lista para asegurarse de que todas las pruebas se han completado co
 - [ ] El endpoint GET /api/Modules/byRole/{roleId} devuelve los módulos correctos
 - [ ] El endpoint POST /api/Modules/assign-to-role asigna correctamente un módulo a un rol
 - [ ] El endpoint DELETE /api/Modules/revoke-from-role/{roleId}/{moduleId} revoca correctamente un módulo de un rol
+- [ ] El endpoint POST /api/Routes/assign-to-module asigna correctamente una ruta a un módulo
+- [ ] El endpoint GET /api/Routes/byModuleAndRole/{moduleId}/{roleId} devuelve las rutas correctas
 - [ ] Las validaciones de seguridad funcionan correctamente
 - [ ] Las pruebas unitarias pasan correctamente
 - [ ] Las pruebas de rendimiento son satisfactorias
