@@ -101,5 +101,200 @@ namespace AuthSystem.Infrastructure.Persistence.Repositories
 
             return await query.FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
         }
+
+        /// <summary>
+        /// Obtiene todos los módulos asignados a un rol
+        /// </summary>
+        /// <param name="roleId">ID del rol</param>
+        /// <param name="cancellationToken">Token de cancelación</param>
+        /// <returns>Lista de módulos asignados al rol</returns>
+        public async Task<IEnumerable<Module>> GetModulesByRoleAsync(Guid roleId, CancellationToken cancellationToken = default)
+        {
+            // Verificar que el rol existe
+            var roleExists = await _context.Roles.AnyAsync(r => r.Id == roleId && r.IsActive, cancellationToken);
+            if (!roleExists)
+            {
+                return Enumerable.Empty<Module>();
+            }
+
+            // Obtener los módulos asignados al rol a través de los permisos
+            var moduleIds = await _context.RolePermissions
+                .Where(rp => rp.RoleId == roleId && rp.IsActive)
+                .Join(_context.Permissions,
+                    rp => rp.PermissionId,
+                    p => p.Id,
+                    (rp, p) => p)
+                .Where(p => p.Name == "Modules.View" && p.IsActive)
+                .Join(_context.PermissionModules,
+                    p => p.Id,
+                    pm => pm.PermissionId,
+                    (p, pm) => pm.ModuleId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            // Obtener los detalles de los módulos
+            return await _dbSet
+                .Where(m => moduleIds.Contains(m.Id) && m.IsActive)
+                .OrderBy(m => m.DisplayOrder)
+                .ToListAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// Verifica si un rol tiene acceso a un módulo
+        /// </summary>
+        /// <param name="roleId">ID del rol</param>
+        /// <param name="moduleId">ID del módulo</param>
+        /// <param name="cancellationToken">Token de cancelación</param>
+        /// <returns>True si el rol tiene acceso al módulo, False en caso contrario</returns>
+        public async Task<bool> RoleHasModuleAccessAsync(Guid roleId, Guid moduleId, CancellationToken cancellationToken = default)
+        {
+            // Verificar que el rol y el módulo existen
+            var roleExists = await _context.Roles.AnyAsync(r => r.Id == roleId && r.IsActive, cancellationToken);
+            var moduleExists = await _dbSet.AnyAsync(m => m.Id == moduleId && m.IsActive, cancellationToken);
+
+            if (!roleExists || !moduleExists)
+            {
+                return false;
+            }
+
+            // Verificar si el rol tiene el permiso Modules.View para el módulo
+            return await _context.RolePermissions
+                .Where(rp => rp.RoleId == roleId && rp.IsActive)
+                .Join(_context.Permissions,
+                    rp => rp.PermissionId,
+                    p => p.Id,
+                    (rp, p) => p)
+                .Where(p => p.Name == "Modules.View" && p.IsActive)
+                .Join(_context.PermissionModules,
+                    p => p.Id,
+                    pm => pm.PermissionId,
+                    (p, pm) => pm)
+                .AnyAsync(pm => pm.ModuleId == moduleId, cancellationToken);
+        }
+
+        /// <summary>
+        /// Asigna un módulo a un rol
+        /// </summary>
+        /// <param name="moduleId">ID del módulo</param>
+        /// <param name="roleId">ID del rol</param>
+        /// <param name="userName">Nombre del usuario que realiza la asignación</param>
+        /// <param name="cancellationToken">Token de cancelación</param>
+        /// <returns>Tarea completada</returns>
+        public async Task AssignModuleToRoleAsync(Guid moduleId, Guid roleId, string userName, CancellationToken cancellationToken = default)
+        {
+            // Verificar que el rol y el módulo existen
+            var role = await _context.Roles.FirstOrDefaultAsync(r => r.Id == roleId && r.IsActive, cancellationToken);
+            var module = await _dbSet.FirstOrDefaultAsync(m => m.Id == moduleId && m.IsActive, cancellationToken);
+
+            if (role == null || module == null)
+            {
+                throw new InvalidOperationException("El rol o el módulo no existen o no están activos");
+            }
+
+            // Buscar el permiso Modules.View
+            var permission = await _context.Permissions
+                .FirstOrDefaultAsync(p => p.Name == "Modules.View" && p.IsActive, cancellationToken);
+
+            if (permission == null)
+            {
+                throw new InvalidOperationException("El permiso Modules.View no existe o no está activo");
+            }
+
+            // Verificar si ya existe una relación entre el permiso y el módulo
+            var permissionModule = await _context.PermissionModules
+                .FirstOrDefaultAsync(pm => pm.PermissionId == permission.Id && pm.ModuleId == moduleId, cancellationToken);
+
+            if (permissionModule == null)
+            {
+                // Crear la relación entre el permiso y el módulo
+                permissionModule = new PermissionModule
+                {
+                    Id = Guid.NewGuid(),
+                    PermissionId = permission.Id,
+                    ModuleId = moduleId,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = userName,
+                    LastModifiedAt = DateTime.UtcNow,
+                    LastModifiedBy = userName
+                };
+
+                await _context.PermissionModules.AddAsync(permissionModule, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+
+            // Verificar si el rol ya tiene asignado el permiso
+            var rolePermission = await _context.RolePermissions
+                .FirstOrDefaultAsync(rp => rp.RoleId == roleId && rp.PermissionId == permission.Id, cancellationToken);
+
+            if (rolePermission == null)
+            {
+                // Asignar el permiso al rol
+                rolePermission = new RolePermission
+                {
+                    RoleId = roleId,
+                    PermissionId = permission.Id,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = userName,
+                    LastModifiedAt = DateTime.UtcNow,
+                    LastModifiedBy = userName
+                };
+
+                await _context.RolePermissions.AddAsync(rolePermission, cancellationToken);
+            }
+            else if (!rolePermission.IsActive)
+            {
+                // Reactivar la asignación si estaba inactiva
+                rolePermission.IsActive = true;
+                rolePermission.LastModifiedAt = DateTime.UtcNow;
+                rolePermission.LastModifiedBy = userName;
+                _context.RolePermissions.Update(rolePermission);
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// Revoca el acceso de un rol a un módulo
+        /// </summary>
+        /// <param name="moduleId">ID del módulo</param>
+        /// <param name="roleId">ID del rol</param>
+        /// <param name="cancellationToken">Token de cancelación</param>
+        /// <returns>Tarea completada</returns>
+        public async Task RevokeModuleFromRoleAsync(Guid moduleId, Guid roleId, CancellationToken cancellationToken = default)
+        {
+            // Buscar el permiso Modules.View
+            var permission = await _context.Permissions
+                .FirstOrDefaultAsync(p => p.Name == "Modules.View" && p.IsActive, cancellationToken);
+
+            if (permission == null)
+            {
+                return;
+            }
+
+            // Verificar si existe una relación entre el permiso y el módulo
+            var permissionModule = await _context.PermissionModules
+                .FirstOrDefaultAsync(pm => pm.PermissionId == permission.Id && pm.ModuleId == moduleId, cancellationToken);
+
+            if (permissionModule == null)
+            {
+                return;
+            }
+
+            // Buscar la asignación del permiso al rol
+            var rolePermission = await _context.RolePermissions
+                .FirstOrDefaultAsync(rp => rp.RoleId == roleId && rp.PermissionId == permission.Id && rp.IsActive, cancellationToken);
+
+            if (rolePermission != null)
+            {
+                // Desactivar la asignación
+                rolePermission.IsActive = false;
+                rolePermission.LastModifiedAt = DateTime.UtcNow;
+                rolePermission.LastModifiedBy = "System"; // Idealmente, debería recibir el nombre del usuario
+
+                _context.RolePermissions.Update(rolePermission);
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+        }
     }
 }

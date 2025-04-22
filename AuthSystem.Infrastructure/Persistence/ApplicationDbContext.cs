@@ -70,6 +70,11 @@ namespace AuthSystem.Infrastructure.Persistence
         public DbSet<RoleRoute> RoleRoutes { get; set; }
 
         /// <summary>
+        /// Relaciones entre permisos y módulos
+        /// </summary>
+        public DbSet<PermissionModule> PermissionModules { get; set; }
+
+        /// <summary>
         /// Configuración del modelo
         /// </summary>
         /// <param name="modelBuilder">Constructor de modelos</param>
@@ -240,6 +245,26 @@ namespace AuthSystem.Infrastructure.Persistence
                     .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasIndex(e => new { e.RoleId, e.RouteId }).IsUnique();
+            });
+
+            modelBuilder.Entity<PermissionModule>(entity =>
+            {
+                entity.ToTable("PermissionModules");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.CreatedBy).HasMaxLength(50);
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(50);
+
+                entity.HasOne(e => e.Permission)
+                    .WithMany(e => e.PermissionModules)
+                    .HasForeignKey(e => e.PermissionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Module)
+                    .WithMany(e => e.PermissionModules)
+                    .HasForeignKey(e => e.ModuleId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.PermissionId, e.ModuleId }).IsUnique();
             });
 
             // Configuración de datos semilla

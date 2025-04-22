@@ -42,5 +42,41 @@ namespace AuthSystem.Domain.Interfaces.Repositories
         /// <param name="cancellationToken">Token de cancelación</param>
         /// <returns>True si tiene submódulos, False en caso contrario</returns>
         Task<bool> HasChildrenAsync(Guid moduleId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Obtiene todos los módulos asignados a un rol
+        /// </summary>
+        /// <param name="roleId">ID del rol</param>
+        /// <param name="cancellationToken">Token de cancelación</param>
+        /// <returns>Lista de módulos asignados al rol</returns>
+        Task<IEnumerable<Module>> GetModulesByRoleAsync(Guid roleId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Verifica si un rol tiene acceso a un módulo
+        /// </summary>
+        /// <param name="roleId">ID del rol</param>
+        /// <param name="moduleId">ID del módulo</param>
+        /// <param name="cancellationToken">Token de cancelación</param>
+        /// <returns>True si el rol tiene acceso al módulo, False en caso contrario</returns>
+        Task<bool> RoleHasModuleAccessAsync(Guid roleId, Guid moduleId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Asigna un módulo a un rol
+        /// </summary>
+        /// <param name="moduleId">ID del módulo</param>
+        /// <param name="roleId">ID del rol</param>
+        /// <param name="userName">Nombre del usuario que realiza la asignación</param>
+        /// <param name="cancellationToken">Token de cancelación</param>
+        /// <returns>Tarea completada</returns>
+        Task AssignModuleToRoleAsync(Guid moduleId, Guid roleId, string userName, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Revoca el acceso de un rol a un módulo
+        /// </summary>
+        /// <param name="moduleId">ID del módulo</param>
+        /// <param name="roleId">ID del rol</param>
+        /// <param name="cancellationToken">Token de cancelación</param>
+        /// <returns>Tarea completada</returns>
+        Task RevokeModuleFromRoleAsync(Guid moduleId, Guid roleId, CancellationToken cancellationToken = default);
     }
 }

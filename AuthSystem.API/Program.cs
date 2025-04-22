@@ -1,4 +1,5 @@
 using AuthSystem.API.Extensions;
+using AuthSystem.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -33,6 +34,13 @@ builder.Services.AddResponseCompression(options =>
 });
 
 var app = builder.Build();
+
+// Inicializar la base de datos
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
+{
+    // Inicializar la base de datos de forma asíncrona
+    await DatabaseInitializer.InitializeAsync(app.Services);
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

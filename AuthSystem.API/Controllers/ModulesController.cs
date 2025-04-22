@@ -378,6 +378,169 @@ namespace AuthSystem.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Mapea un módulo a un DTO
+        /// </summary>
+        /// <param name="module">Módulo a mapear</param>
+        /// <returns>DTO del módulo</returns>
+        private ModuleDto MapToDto(Module module)
+        {
+            if (module == null)
+            {
+                return null;
+            }
+
+            return new ModuleDto
+            {
+                Id = module.Id,
+                Name = module.Name,
+                Description = module.Description,
+                Route = module.Route,
+                Icon = module.Icon,
+                DisplayOrder = module.DisplayOrder,
+                ParentId = module.ParentId,
+                IsEnabled = module.IsEnabled,
+                CreatedAt = module.CreatedAt,
+                CreatedBy = module.CreatedBy,
+                UpdatedAt = module.UpdatedAt,
+                UpdatedBy = module.UpdatedBy
+            };
+        }
+
+        /// <summary>
+        /// Obtiene todos los módulos asignados a un rol
+        /// </summary>
+        /// <param name="roleId">ID del rol</param>
+        /// <returns>Lista de módulos asignados al rol</returns>
+        [HttpGet("byRole/{roleId}")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<IEnumerable<ModuleDto>>> GetModulesByRole(Guid roleId)
+        {
+            try
+            {
+                // Verificar que el rol existe
+                var role = await _unitOfWork.Roles.GetByIdAsync(roleId);
+                if (role == null)
+                {
+                    return NotFound($"No se encontró el rol con ID {roleId}");
+                }
+
+                // Obtener los módulos asignados al rol
+                var modules = await _unitOfWork.Modules.GetModulesByRoleAsync(roleId);
+                var moduleDtos = modules.Select(MapToDto).ToList();
+
+                return Ok(moduleDtos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener los módulos del rol con ID {RoleId}", roleId);
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error al obtener los módulos del rol");
+            }
+        }
+
+        /// <summary>
+        /// Asigna un módulo a un rol
+        /// </summary>
+        /// <param name="request">Datos de la asignación</param>
+        /// <returns>Mensaje de confirmación</returns>
+        [HttpPost("assign-to-role")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult> AssignModuleToRole([FromBody] AssignModuleToRoleRequest request)
+        {
+            try
+            {
+                // Verificar que el módulo existe
+                var module = await _unitOfWork.Modules.GetByIdAsync(request.ModuleId);
+                if (module == null)
+                {
+                    return NotFound($"No se encontró el módulo con ID {request.ModuleId}");
+                }
+
+                // Verificar que el rol existe
+                var role = await _unitOfWork.Roles.GetByIdAsync(request.RoleId);
+                if (role == null)
+                {
+                    return NotFound($"No se encontró el rol con ID {request.RoleId}");
+                }
+
+                // Verificar si el rol ya tiene acceso al módulo
+                if (await _unitOfWork.Modules.RoleHasModuleAccessAsync(request.RoleId, request.ModuleId))
+                {
+                    return BadRequest($"El rol ya tiene acceso al módulo");
+                }
+
+                // Obtener el nombre de usuario del token
+                var userName = User.Identity.Name ?? "System";
+
+                // Asignar el módulo al rol
+                await _unitOfWork.Modules.AssignModuleToRoleAsync(request.ModuleId, request.RoleId, userName);
+
+                return Ok(new { message = $"Módulo asignado correctamente al rol" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al asignar el módulo {ModuleId} al rol {RoleId}", request.ModuleId, request.RoleId);
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error al asignar el módulo al rol");
+            }
+        }
+
+        /// <summary>
+        /// Revoca el acceso de un rol a un módulo
+        /// </summary>
+        /// <param name="roleId">ID del rol</param>
+        /// <param name="moduleId">ID del módulo</param>
+        /// <returns>Mensaje de confirmación</returns>
+        [HttpDelete("revoke-from-role/{roleId}/{moduleId}")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult> RevokeModuleFromRole(Guid roleId, Guid moduleId)
+        {
+            try
+            {
+                // Verificar que el módulo existe
+                var module = await _unitOfWork.Modules.GetByIdAsync(moduleId);
+                if (module == null)
+                {
+                    return NotFound($"No se encontró el módulo con ID {moduleId}");
+                }
+
+                // Verificar que el rol existe
+                var role = await _unitOfWork.Roles.GetByIdAsync(roleId);
+                if (role == null)
+                {
+                    return NotFound($"No se encontró el rol con ID {roleId}");
+                }
+
+                // Verificar si el rol tiene acceso al módulo
+                if (!await _unitOfWork.Modules.RoleHasModuleAccessAsync(roleId, moduleId))
+                {
+                    return BadRequest($"El rol no tiene acceso al módulo");
+                }
+
+                // Revocar el acceso del rol al módulo
+                await _unitOfWork.Modules.RevokeModuleFromRoleAsync(moduleId, roleId);
+
+                return Ok(new { message = $"Acceso al módulo revocado correctamente del rol" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al revocar el acceso al módulo {ModuleId} del rol {RoleId}", moduleId, roleId);
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error al revocar el acceso al módulo del rol");
+            }
+        }
+
         #region Helper Methods
 
         /// <summary>
@@ -413,7 +576,11 @@ namespace AuthSystem.API.Controllers
                 Icon = module.Icon,
                 DisplayOrder = module.DisplayOrder,
                 ParentId = module.ParentId,
-                IsEnabled = module.IsEnabled
+                IsEnabled = module.IsEnabled,
+                CreatedAt = module.CreatedAt,
+                CreatedBy = module.CreatedBy,
+                UpdatedAt = module.UpdatedAt,
+                UpdatedBy = module.UpdatedBy ?? string.Empty
             };
 
             // Agregar submódulos

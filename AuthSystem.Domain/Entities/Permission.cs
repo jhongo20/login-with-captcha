@@ -24,11 +24,17 @@ namespace AuthSystem.Domain.Entities
         public virtual ICollection<RolePermission> RolePermissions { get; set; }
 
         /// <summary>
+        /// Módulos asociados a este permiso
+        /// </summary>
+        public virtual ICollection<PermissionModule> PermissionModules { get; set; }
+
+        /// <summary>
         /// Constructor
         /// </summary>
         public Permission()
         {
             RolePermissions = new HashSet<RolePermission>();
+            PermissionModules = new HashSet<PermissionModule>();
         }
     }
 }

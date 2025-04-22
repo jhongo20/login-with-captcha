@@ -18,6 +18,13 @@ Este proyecto implementa un sistema completo de autenticación y gestión de mó
 - Activación/desactivación de módulos
 - Rutas e iconos configurables
 - Validaciones para prevenir ciclos y duplicados
+- Asociación de módulos a roles para control de acceso
+
+### Gestión de Rutas
+- CRUD completo para rutas
+- Vinculación de rutas a módulos
+- Asignación de rutas a roles
+- Control de acceso basado en roles y rutas
 
 ## Estructura del proyecto
 
@@ -36,6 +43,9 @@ La documentación detallada está disponible en la carpeta `/docs`:
 - [Documentación de Módulos](./docs/Modules.md)
 - [Guía de Integración de Módulos](./docs/ModulesIntegrationGuide.md)
 - [Guía de Pruebas para Módulos](./docs/ModulesTestingGuide.md)
+- [Asociación de Módulos a Roles](./docs/ModuleRoleAssociation.md)
+- [Guía de Integración para Módulos y Roles](./docs/ModuleRoleIntegrationGuide.md)
+- [Guía de Pruebas para Módulos y Roles](./docs/ModuleRoleTestingGuide.md)
 
 ## Requisitos
 

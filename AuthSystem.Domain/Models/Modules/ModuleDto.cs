@@ -49,6 +49,26 @@ namespace AuthSystem.Domain.Models.Modules
         public bool IsEnabled { get; set; }
 
         /// <summary>
+        /// Fecha de creación
+        /// </summary>
+        public DateTime CreatedAt { get; set; }
+
+        /// <summary>
+        /// Usuario que creó el módulo
+        /// </summary>
+        public string CreatedBy { get; set; }
+
+        /// <summary>
+        /// Fecha de última actualización
+        /// </summary>
+        public DateTime? UpdatedAt { get; set; }
+
+        /// <summary>
+        /// Usuario que actualizó el módulo
+        /// </summary>
+        public string UpdatedBy { get; set; }
+
+        /// <summary>
         /// Submódulos
         /// </summary>
         public List<ModuleDto> Children { get; set; } = new List<ModuleDto>();

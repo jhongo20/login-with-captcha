@@ -62,5 +62,15 @@ namespace AuthSystem.Domain.Entities
         /// Submódulos
         /// </summary>
         public virtual ICollection<Module> Children { get; set; } = new List<Module>();
+
+        /// <summary>
+        /// Permisos asociados a este módulo
+        /// </summary>
+        public virtual ICollection<PermissionModule> PermissionModules { get; set; } = new List<PermissionModule>();
+
+        /// <summary>
+        /// Rutas asociadas a este módulo
+        /// </summary>
+        public virtual ICollection<Route> Routes { get; set; } = new List<Route>();
     }
 }
