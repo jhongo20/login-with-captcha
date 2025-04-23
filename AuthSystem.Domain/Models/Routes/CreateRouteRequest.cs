@@ -26,6 +26,8 @@ namespace AuthSystem.Domain.Models.Routes
         
         public bool IsEnabled { get; set; } = true;
         
+        public bool IsActive { get; set; } = true;
+        
         [Required(ErrorMessage = "El ID del módulo es obligatorio")]
         public Guid ModuleId { get; set; }
     }

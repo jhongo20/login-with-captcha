@@ -27,6 +27,11 @@ namespace AuthSystem.Domain.Entities
         /// Módulos asociados a este permiso
         /// </summary>
         public virtual ICollection<PermissionModule> PermissionModules { get; set; }
+        
+        /// <summary>
+        /// Rutas asociadas a este permiso
+        /// </summary>
+        public virtual ICollection<PermissionRoute> PermissionRoutes { get; set; }
 
         /// <summary>
         /// Constructor
@@ -35,6 +40,7 @@ namespace AuthSystem.Domain.Entities
         {
             RolePermissions = new HashSet<RolePermission>();
             PermissionModules = new HashSet<PermissionModule>();
+            PermissionRoutes = new HashSet<PermissionRoute>();
         }
     }
 }

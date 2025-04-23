@@ -75,6 +75,11 @@ namespace AuthSystem.Infrastructure.Persistence
         public DbSet<PermissionModule> PermissionModules { get; set; }
 
         /// <summary>
+        /// Relaciones entre permisos y rutas
+        /// </summary>
+        public DbSet<PermissionRoute> PermissionRoutes { get; set; }
+
+        /// <summary>
         /// Configuración del modelo
         /// </summary>
         /// <param name="modelBuilder">Constructor de modelos</param>
@@ -201,8 +206,14 @@ namespace AuthSystem.Infrastructure.Persistence
                 entity.HasIndex(e => e.ParentId);
 
                 entity.HasOne(e => e.Parent)
-                    .WithMany()
+                    .WithMany(e => e.Children)
                     .HasForeignKey(e => e.ParentId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                // Configuración explícita de la relación con Route
+                entity.HasMany(e => e.Routes)
+                    .WithOne(r => r.Module)
+                    .HasForeignKey(r => r.ModuleId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -215,16 +226,13 @@ namespace AuthSystem.Infrastructure.Persistence
                 entity.Property(e => e.HttpMethod).IsRequired().HasMaxLength(10);
                 entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.LastModifiedBy).HasMaxLength(100);
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
 
-                entity.HasOne(e => e.Module)
-                    .WithMany()
-                    .HasForeignKey(e => e.ModuleId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                // La relación con Module ya está configurada en la entidad Module
+                // No necesitamos configurarla aquí para evitar duplicación
 
                 entity.HasIndex(e => e.ModuleId);
-
                 entity.HasIndex(e => new { e.Path, e.HttpMethod }).IsUnique();
-
                 entity.HasIndex(e => new { e.Name, e.ModuleId }).IsUnique();
             });
 
@@ -233,6 +241,7 @@ namespace AuthSystem.Infrastructure.Persistence
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.LastModifiedBy).HasMaxLength(100);
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
 
                 entity.HasOne(e => e.Role)
                     .WithMany()
@@ -265,6 +274,27 @@ namespace AuthSystem.Infrastructure.Persistence
                     .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasIndex(e => new { e.PermissionId, e.ModuleId }).IsUnique();
+            });
+
+            modelBuilder.Entity<PermissionRoute>(entity =>
+            {
+                entity.ToTable("PermissionRoutes");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.CreatedBy).HasMaxLength(50);
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(50);
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+                entity.HasOne(e => e.Permission)
+                    .WithMany(e => e.PermissionRoutes)
+                    .HasForeignKey(e => e.PermissionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Route)
+                    .WithMany(e => e.PermissionRoutes)
+                    .HasForeignKey(e => e.RouteId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.PermissionId, e.RouteId }).IsUnique();
             });
 
             // Configuración de datos semilla

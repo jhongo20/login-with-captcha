@@ -49,6 +49,21 @@ namespace AuthSystem.Domain.Interfaces
         /// Repositorio de rutas
         /// </summary>
         IRouteRepository Routes { get; }
+        
+        /// <summary>
+        /// Repositorio de relaciones entre roles y rutas
+        /// </summary>
+        IRoleRouteRepository RoleRoutes { get; }
+        
+        /// <summary>
+        /// Repositorio de relaciones entre permisos y módulos
+        /// </summary>
+        IPermissionModuleRepository PermissionModules { get; }
+        
+        /// <summary>
+        /// Repositorio de relaciones entre permisos y rutas
+        /// </summary>
+        IPermissionRouteRepository PermissionRoutes { get; }
 
         /// <summary>
         /// Guarda los cambios en la base de datos

@@ -45,7 +45,7 @@ namespace AuthSystem.Domain.Entities
         /// <summary>
         /// Indica si la ruta está activa
         /// </summary>
-        public bool IsActive { get; set; }
+        public bool IsActive { get; set; } = true;
         
         /// <summary>
         /// ID del módulo al que pertenece la ruta
@@ -81,5 +81,16 @@ namespace AuthSystem.Domain.Entities
         /// Colección de roles que tienen acceso a esta ruta
         /// </summary>
         public virtual ICollection<RoleRoute> RoleRoutes { get; set; }
+        
+        /// <summary>
+        /// Colección de permisos asociados a esta ruta
+        /// </summary>
+        public virtual ICollection<PermissionRoute> PermissionRoutes { get; set; }
+        
+        public Route()
+        {
+            RoleRoutes = new HashSet<RoleRoute>();
+            PermissionRoutes = new HashSet<PermissionRoute>();
+        }
     }
 }

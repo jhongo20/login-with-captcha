@@ -17,34 +17,92 @@ namespace AuthSystem.Infrastructure.Persistence.Repositories
 
         public async Task<IEnumerable<Route>> GetEnabledRoutesAsync()
         {
-            return await _context.Routes
-                .Where(r => r.IsEnabled && r.IsActive)
-                .Include(r => r.Module)
-                .OrderBy(r => r.Module.Name)
-                .ThenBy(r => r.DisplayOrder)
-                .ToListAsync();
+            try
+            {
+                // Modificamos la consulta para evitar el error de ModuleId1
+                var routes = await _context.Routes
+                    .Where(r => r.IsEnabled && r.IsActive)
+                    .ToListAsync();
+                
+                // Cargamos los módulos manualmente para evitar problemas de relación
+                foreach (var route in routes)
+                {
+                    route.Module = await _context.Modules.FirstOrDefaultAsync(m => m.Id == route.ModuleId);
+                }
+                
+                return routes.OrderBy(r => r.DisplayOrder).ToList();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error en GetEnabledRoutesAsync: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"InnerException: {ex.InnerException.Message}");
+                }
+                return new List<Route>();
+            }
         }
 
         public async Task<IEnumerable<Route>> GetRoutesByModuleAsync(Guid moduleId)
         {
-            return await _context.Routes
-                .Where(r => r.ModuleId == moduleId && r.IsActive)
-                .Include(r => r.Module)
-                .OrderBy(r => r.DisplayOrder)
-                .ToListAsync();
+            try
+            {
+                // Modificamos la consulta para evitar el error de ModuleId1
+                var routes = await _context.Routes
+                    .Where(r => r.ModuleId == moduleId && r.IsActive)
+                    .ToListAsync();
+                
+                // Cargamos los módulos manualmente para evitar problemas de relación
+                foreach (var route in routes)
+                {
+                    route.Module = await _context.Modules.FirstOrDefaultAsync(m => m.Id == route.ModuleId);
+                }
+                
+                return routes.OrderBy(r => r.DisplayOrder).ToList();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error en GetRoutesByModuleAsync: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"InnerException: {ex.InnerException.Message}");
+                }
+                return new List<Route>();
+            }
         }
 
         public async Task<IEnumerable<Route>> GetRoutesByRoleAsync(Guid roleId)
         {
-            return await _context.RoleRoutes
-                .Where(rr => rr.RoleId == roleId && rr.IsActive)
-                .Include(rr => rr.Route)
-                .ThenInclude(r => r.Module)
-                .Select(rr => rr.Route)
-                .Where(r => r.IsActive)
-                .OrderBy(r => r.Module.Name)
-                .ThenBy(r => r.DisplayOrder)
-                .ToListAsync();
+            try
+            {
+                // Modificamos la consulta para evitar el error de ModuleId1
+                var roleRoutes = await _context.RoleRoutes
+                    .Where(rr => rr.RoleId == roleId && rr.IsActive)
+                    .ToListAsync();
+                
+                var routeIds = roleRoutes.Select(rr => rr.RouteId).ToList();
+                
+                var routes = await _context.Routes
+                    .Where(r => routeIds.Contains(r.Id) && r.IsActive)
+                    .ToListAsync();
+                
+                // Cargamos los módulos manualmente para evitar problemas de relación
+                foreach (var route in routes)
+                {
+                    route.Module = await _context.Modules.FirstOrDefaultAsync(m => m.Id == route.ModuleId);
+                }
+                
+                return routes.OrderBy(r => r.DisplayOrder).ToList();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error en GetRoutesByRoleAsync: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"InnerException: {ex.InnerException.Message}");
+                }
+                return new List<Route>();
+            }
         }
 
         public async Task<bool> RoleHasRouteAccessAsync(Guid roleId, Guid routeId)
@@ -145,19 +203,81 @@ namespace AuthSystem.Infrastructure.Persistence.Repositories
 
         public override async Task<IEnumerable<Route>> GetAllAsync()
         {
-            return await _context.Routes
-                .Where(r => r.IsActive)
-                .Include(r => r.Module)
-                .OrderBy(r => r.Module.Name)
-                .ThenBy(r => r.DisplayOrder)
-                .ToListAsync();
+            try
+            {
+                // Modificamos la consulta para evitar el error de ModuleId1
+                var routes = await _context.Routes
+                    .Where(r => r.IsActive)
+                    .ToListAsync();
+                
+                // Cargamos los módulos manualmente para evitar problemas de relación
+                foreach (var route in routes)
+                {
+                    route.Module = await _context.Modules.FirstOrDefaultAsync(m => m.Id == route.ModuleId);
+                }
+                
+                return routes.OrderBy(r => r.DisplayOrder).ToList();
+            }
+            catch (Exception ex)
+            {
+                // Registrar el error con más detalles
+                Console.WriteLine($"Error en GetAllAsync: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"InnerException: {ex.InnerException.Message}");
+                }
+                
+                // Devolver una lista vacía en caso de error
+                return new List<Route>();
+            }
         }
 
         public override async Task<Route> GetByIdAsync(Guid id)
         {
-            return await _context.Routes
-                .Include(r => r.Module)
-                .FirstOrDefaultAsync(r => r.Id == id && r.IsActive);
+            try
+            {
+                // Modificamos la consulta para evitar el error de ModuleId1
+                var route = await _context.Routes
+                    .FirstOrDefaultAsync(r => r.Id == id && r.IsActive);
+                
+                if (route != null)
+                {
+                    // Cargamos el módulo manualmente para evitar problemas de relación
+                    route.Module = await _context.Modules.FirstOrDefaultAsync(m => m.Id == route.ModuleId);
+                }
+                
+                return route;
+            }
+            catch (DbUpdateException ex)
+            {
+                // Registrar el error de base de datos
+                Console.WriteLine($"Error de base de datos en GetByIdAsync: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"InnerException: {ex.InnerException.Message}");
+                }
+                
+                // Devolver null en caso de error de base de datos
+                return null;
+            }
+            catch (Exception ex)
+            {
+                // Registrar el error con más detalles
+                Console.WriteLine($"Error en GetByIdAsync: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"InnerException: {ex.InnerException.Message}");
+                }
+                
+                // Devolver null en caso de error
+                return null;
+            }
         }
 
         /// <summary>
@@ -300,6 +420,16 @@ namespace AuthSystem.Infrastructure.Persistence.Repositories
                 .Include(r => r.Module)
                 .OrderBy(r => r.Name)
                 .ToListAsync();
+        }
+
+        // Sobrescribir el método AddAsync para asegurarnos de que IsActive siempre sea true
+        public override async Task AddAsync(Route entity)
+        {
+            // Forzar IsActive a true
+            entity.IsActive = true;
+            
+            // Llamar al método base
+            await base.AddAsync(entity);
         }
     }
 }

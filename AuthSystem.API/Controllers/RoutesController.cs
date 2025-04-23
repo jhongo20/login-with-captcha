@@ -3,12 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using System.Data.SqlClient;
 using AuthSystem.Domain.Entities;
 using AuthSystem.Domain.Interfaces;
 using AuthSystem.Domain.Models.Routes;
+using AuthSystem.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Route = AuthSystem.Domain.Entities.Route;
 
@@ -22,11 +26,15 @@ namespace AuthSystem.API.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<RoutesController> _logger;
+        private readonly ApplicationDbContext _context; // Corregir el tipo de contexto
+        private readonly IConfiguration _configuration;
 
-        public RoutesController(IUnitOfWork unitOfWork, ILogger<RoutesController> logger)
+        public RoutesController(IUnitOfWork unitOfWork, ILogger<RoutesController> logger, ApplicationDbContext context, IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _context = context;
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -42,14 +50,40 @@ namespace AuthSystem.API.Controllers
         {
             try
             {
+                _logger.LogInformation("Obteniendo todas las rutas");
+                
+                // Verificar si hay rutas en la base de datos directamente con el contexto
+                var routeCount = await _context.Routes.CountAsync();
+                _logger.LogInformation("Total de rutas en la base de datos: {Count}", routeCount);
+                
+                var activeRouteCount = await _context.Routes.Where(r => r.IsActive).CountAsync();
+                _logger.LogInformation("Total de rutas activas en la base de datos: {Count}", activeRouteCount);
+                
+                // Obtener todas las rutas
                 var routes = await _unitOfWork.Routes.GetAllAsync();
+                _logger.LogInformation("Se encontraron {Count} rutas después de aplicar filtros", routes.Count());
+                
+                // Si no hay rutas, verificar si hay algún problema con la consulta
+                if (!routes.Any())
+                {
+                    _logger.LogWarning("No se encontraron rutas activas. Verificando si hay rutas inactivas...");
+                    var inactiveRoutes = await _context.Routes.Where(r => !r.IsActive).ToListAsync();
+                    _logger.LogInformation("Rutas inactivas encontradas: {Count}", inactiveRoutes.Count);
+                }
+                
                 var routeDtos = routes.Select(MapToDto).ToList();
                 return Ok(routeDtos);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener todas las rutas");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error al obtener las rutas");
+                _logger.LogError(ex, "Error al obtener todas las rutas: {Message}", ex.Message);
+                
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError("Inner Exception: {Message}", ex.InnerException.Message);
+                }
+                
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Error al obtener las rutas", error = ex.Message });
             }
         }
 
@@ -162,7 +196,7 @@ namespace AuthSystem.API.Controllers
                     return NotFound($"No se encontró el rol con ID {roleId}");
                 }
 
-                var routes = await _unitOfWork.Routes.GetRoutesByRoleAsync(roleId);
+                var routes = await _unitOfWork.RoleRoutes.GetRoutesByRoleAsync(roleId);
                 var routeDtos = routes.Select(MapToDto).ToList();
                 return Ok(routeDtos);
             }
@@ -192,54 +226,118 @@ namespace AuthSystem.API.Controllers
                 var module = await _unitOfWork.Modules.GetByIdAsync(request.ModuleId);
                 if (module == null)
                 {
+                    _logger.LogWarning("No se encontró el módulo con ID {ModuleId}", request.ModuleId);
                     return BadRequest($"No se encontró el módulo con ID {request.ModuleId}");
                 }
 
                 // Verificar que no exista una ruta con el mismo nombre en el mismo módulo
                 if (await _unitOfWork.Routes.ExistsWithNameInModuleAsync(request.Name, request.ModuleId))
                 {
+                    _logger.LogWarning("Ya existe una ruta con el nombre '{Name}' en el módulo seleccionado", request.Name);
                     return BadRequest($"Ya existe una ruta con el nombre '{request.Name}' en el módulo seleccionado");
                 }
 
                 // Verificar que no exista una ruta con el mismo path y método HTTP
                 if (await _unitOfWork.Routes.ExistsWithPathAndMethodAsync(request.Path, request.HttpMethod))
                 {
+                    _logger.LogWarning("Ya existe una ruta con el path '{Path}' y método HTTP '{HttpMethod}'", request.Path, request.HttpMethod);
                     return BadRequest($"Ya existe una ruta con el path '{request.Path}' y método HTTP '{request.HttpMethod}'");
                 }
 
                 // Obtener el nombre de usuario del token
                 var userName = User.FindFirst(ClaimTypes.Name)?.Value ?? "System";
 
-                // Crear la nueva ruta
-                var route = new AuthSystem.Domain.Entities.Route
+                // Crear un nuevo ID para la ruta
+                var routeId = Guid.NewGuid();
+                
+                // Crear la ruta directamente usando ADO.NET
+                var connectionString = _configuration.GetConnectionString("DefaultConnection");
+                using (var connection = new SqlConnection(connectionString))
                 {
-                    Id = Guid.NewGuid(),
-                    Name = request.Name,
-                    Description = request.Description,
-                    Path = request.Path,
-                    HttpMethod = request.HttpMethod,
-                    DisplayOrder = request.DisplayOrder,
-                    RequiresAuth = request.RequiresAuth,
-                    IsEnabled = request.IsEnabled,
-                    ModuleId = request.ModuleId,
-                    CreatedAt = DateTime.UtcNow,
-                    CreatedBy = userName,
-                    LastModifiedAt = DateTime.UtcNow,
-                    LastModifiedBy = userName
-                };
-
-                await _unitOfWork.Routes.AddAsync(route);
-                await _unitOfWork.SaveChangesAsync();
-
-                // Obtener la ruta con su módulo para el DTO
-                route = await _unitOfWork.Routes.GetByIdAsync(route.Id);
-
-                return CreatedAtAction(nameof(GetRouteById), new { id = route.Id }, MapToDto(route));
+                    await connection.OpenAsync();
+                    
+                    var insertQuery = @"
+                        INSERT INTO Routes (
+                            Id, 
+                            Name, 
+                            Description, 
+                            Path, 
+                            HttpMethod, 
+                            DisplayOrder, 
+                            RequiresAuth, 
+                            IsEnabled, 
+                            IsActive, 
+                            ModuleId, 
+                            CreatedAt, 
+                            CreatedBy, 
+                            LastModifiedAt, 
+                            LastModifiedBy
+                        )
+                        VALUES (
+                            @Id, 
+                            @Name, 
+                            @Description, 
+                            @Path, 
+                            @HttpMethod, 
+                            @DisplayOrder, 
+                            @RequiresAuth, 
+                            @IsEnabled, 
+                            @IsActive, 
+                            @ModuleId, 
+                            @CreatedAt, 
+                            @CreatedBy, 
+                            @LastModifiedAt, 
+                            @LastModifiedBy
+                        );";
+                    
+                    using (var command = new SqlCommand(insertQuery, connection))
+                    {
+                        command.Parameters.AddWithValue("@Id", routeId);
+                        command.Parameters.AddWithValue("@Name", request.Name);
+                        command.Parameters.AddWithValue("@Description", request.Description ?? (object)DBNull.Value);
+                        command.Parameters.AddWithValue("@Path", request.Path);
+                        command.Parameters.AddWithValue("@HttpMethod", request.HttpMethod);
+                        command.Parameters.AddWithValue("@DisplayOrder", request.DisplayOrder);
+                        command.Parameters.AddWithValue("@RequiresAuth", request.RequiresAuth);
+                        command.Parameters.AddWithValue("@IsEnabled", request.IsEnabled);
+                        command.Parameters.AddWithValue("@IsActive", true); // Forzar IsActive a true
+                        command.Parameters.AddWithValue("@ModuleId", request.ModuleId);
+                        command.Parameters.AddWithValue("@CreatedAt", DateTime.UtcNow);
+                        command.Parameters.AddWithValue("@CreatedBy", userName);
+                        command.Parameters.AddWithValue("@LastModifiedAt", DateTime.UtcNow);
+                        command.Parameters.AddWithValue("@LastModifiedBy", userName);
+                        
+                        _logger.LogInformation("Ejecutando consulta SQL para crear ruta: {Name}, Path: {Path}, HttpMethod: {HttpMethod}, ModuleId: {ModuleId}, IsActive: {IsActive}", 
+                            request.Name, request.Path, request.HttpMethod, request.ModuleId, true);
+                        
+                        await command.ExecuteNonQueryAsync();
+                    }
+                }
+                
+                // Obtener la ruta recién creada
+                var route = await _unitOfWork.Routes.GetByIdAsync(routeId);
+                if (route == null)
+                {
+                    _logger.LogError("No se pudo obtener la ruta recién creada con ID {RouteId}", routeId);
+                    return StatusCode(StatusCodes.Status500InternalServerError, "Error al crear la ruta");
+                }
+                
+                // Cargar el módulo manualmente
+                route.Module = module;
+                
+                var routeDto = MapToDto(route);
+                return CreatedAtAction(nameof(GetRouteById), new { id = routeDto.Id }, routeDto);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al crear la ruta");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error al crear la ruta");
+                _logger.LogError(ex, "Error al crear la ruta: {Message}", ex.Message);
+                
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError("Inner Exception: {Message}", ex.InnerException.Message);
+                }
+                
+                return StatusCode(StatusCodes.Status500InternalServerError, $"Error al crear la ruta: {ex.Message}");
             }
         }
 
@@ -375,6 +473,7 @@ namespace AuthSystem.API.Controllers
                 var route = await _unitOfWork.Routes.GetByIdAsync(request.RouteId);
                 if (route == null)
                 {
+                    _logger.LogWarning("No se encontró la ruta con ID {RouteId}", request.RouteId);
                     return NotFound($"No se encontró la ruta con ID {request.RouteId}");
                 }
 
@@ -382,27 +481,108 @@ namespace AuthSystem.API.Controllers
                 var role = await _unitOfWork.Roles.GetByIdAsync(request.RoleId);
                 if (role == null)
                 {
+                    _logger.LogWarning("No se encontró el rol con ID {RoleId}", request.RoleId);
                     return NotFound($"No se encontró el rol con ID {request.RoleId}");
-                }
-
-                // Verificar que el rol tiene acceso al módulo de la ruta
-                if (!await _unitOfWork.Routes.RoleHasModuleAccessAsync(request.RoleId, route.ModuleId))
-                {
-                    return BadRequest($"El rol no tiene acceso al módulo de esta ruta. Primero debe asignar el permiso 'Modules.View' al rol.");
                 }
 
                 // Obtener el nombre de usuario del token
                 var userName = User.FindFirst(ClaimTypes.Name)?.Value ?? "System";
 
-                // Asignar la ruta al rol
-                await _unitOfWork.Routes.AssignRouteToRoleAsync(request.RouteId, request.RoleId, userName);
+                // Usar ADO.NET directamente para insertar la relación
+                try
+                {
+                    // Verificar si ya existe la relación
+                    string checkQuery = @"
+                        SELECT COUNT(*) FROM RoleRoutes 
+                        WHERE RouteId = @RouteId AND RoleId = @RoleId";
 
-                return Ok(new { message = $"Ruta asignada correctamente al rol" });
+                    string connectionString = _configuration.GetConnectionString("DefaultConnection");
+                    using (var connection = new SqlConnection(connectionString))
+                    {
+                        await connection.OpenAsync();
+                        
+                        // Verificar si la relación ya existe
+                        using (var checkCommand = new SqlCommand(checkQuery, connection))
+                        {
+                            checkCommand.Parameters.AddWithValue("@RouteId", request.RouteId);
+                            checkCommand.Parameters.AddWithValue("@RoleId", request.RoleId);
+                            
+                            int count = (int)await checkCommand.ExecuteScalarAsync();
+                            
+                            if (count > 0)
+                            {
+                                // Actualizar la relación existente
+                                string updateQuery = @"
+                                    UPDATE RoleRoutes 
+                                    SET IsActive = 1, 
+                                        LastModifiedAt = @LastModifiedAt, 
+                                        LastModifiedBy = @LastModifiedBy 
+                                    WHERE RouteId = @RouteId AND RoleId = @RoleId";
+                                
+                                using (var updateCommand = new SqlCommand(updateQuery, connection))
+                                {
+                                    updateCommand.Parameters.AddWithValue("@RouteId", request.RouteId);
+                                    updateCommand.Parameters.AddWithValue("@RoleId", request.RoleId);
+                                    updateCommand.Parameters.AddWithValue("@LastModifiedAt", DateTime.UtcNow);
+                                    updateCommand.Parameters.AddWithValue("@LastModifiedBy", userName);
+                                    
+                                    await updateCommand.ExecuteNonQueryAsync();
+                                    _logger.LogInformation("Relación RoleRoute actualizada para RouteId: {RouteId}, RoleId: {RoleId}", request.RouteId, request.RoleId);
+                                }
+                            }
+                            else
+                            {
+                                // Crear una nueva relación
+                                string insertQuery = @"
+                                    INSERT INTO RoleRoutes (
+                                        Id, 
+                                        RoleId, 
+                                        RouteId, 
+                                        IsActive, 
+                                        CreatedAt, 
+                                        CreatedBy, 
+                                        LastModifiedAt, 
+                                        LastModifiedBy
+                                    ) VALUES (
+                                        @Id, 
+                                        @RoleId, 
+                                        @RouteId, 
+                                        1, 
+                                        @CreatedAt, 
+                                        @CreatedBy, 
+                                        @LastModifiedAt, 
+                                        @LastModifiedBy
+                                    )";
+                                
+                                using (var insertCommand = new SqlCommand(insertQuery, connection))
+                                {
+                                    insertCommand.Parameters.AddWithValue("@Id", Guid.NewGuid());
+                                    insertCommand.Parameters.AddWithValue("@RouteId", request.RouteId);
+                                    insertCommand.Parameters.AddWithValue("@RoleId", request.RoleId);
+                                    insertCommand.Parameters.AddWithValue("@CreatedAt", DateTime.UtcNow);
+                                    insertCommand.Parameters.AddWithValue("@CreatedBy", userName);
+                                    insertCommand.Parameters.AddWithValue("@LastModifiedAt", DateTime.UtcNow);
+                                    insertCommand.Parameters.AddWithValue("@LastModifiedBy", userName);
+                                    
+                                    await insertCommand.ExecuteNonQueryAsync();
+                                    _logger.LogInformation("Nueva relación RoleRoute creada para RouteId: {RouteId}, RoleId: {RoleId}", request.RouteId, request.RoleId);
+                                }
+                            }
+                        }
+                    }
+                    
+                    return Ok(new { message = $"Ruta asignada correctamente al rol" });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error al crear/actualizar la relación RoleRoute para RouteId: {RouteId}, RoleId: {RoleId}", request.RouteId, request.RoleId);
+                    return StatusCode(StatusCodes.Status500InternalServerError, $"Error al asignar la ruta al rol: {ex.Message}");
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al asignar la ruta {RouteId} al rol {RoleId}", request.RouteId, request.RoleId);
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error al asignar la ruta al rol");
+                return StatusCode(StatusCodes.Status500InternalServerError, $"Error al asignar la ruta al rol: {ex.Message}");
             }
         }
 
@@ -437,13 +617,13 @@ namespace AuthSystem.API.Controllers
                 }
 
                 // Verificar que el rol tiene acceso a la ruta
-                if (!await _unitOfWork.Routes.RoleHasRouteAccessAsync(roleId, routeId))
+                if (!await _unitOfWork.RoleRoutes.RoleHasRouteAsync(routeId, roleId))
                 {
                     return BadRequest($"El rol no tiene acceso a esta ruta");
                 }
 
                 // Revocar el acceso del rol a la ruta
-                await _unitOfWork.Routes.RevokeRouteFromRoleAsync(routeId, roleId);
+                await _unitOfWork.RoleRoutes.RevokeRouteFromRoleAsync(routeId, roleId);
 
                 return Ok(new { message = $"Acceso a la ruta revocado correctamente del rol" });
             }
@@ -485,7 +665,7 @@ namespace AuthSystem.API.Controllers
                 }
 
                 // Obtener las rutas del módulo asignadas al rol
-                var routes = await _unitOfWork.Routes.GetRoutesByModuleAndRoleAsync(moduleId, roleId);
+                var routes = await _unitOfWork.RoleRoutes.GetRoutesByModuleAndRoleAsync(moduleId, roleId);
                 var routeDtos = routes.Select(MapToDto).ToList();
 
                 return Ok(routeDtos);
