@@ -136,5 +136,32 @@ namespace AuthSystem.Infrastructure.Persistence.Repositories
                     .ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync(u => u.Id == id && u.IsActive, cancellationToken);
         }
+
+        /// <summary>
+        /// Obtiene un usuario por su ID incluyendo inactivos
+        /// </summary>
+        /// <param name="id">ID del usuario</param>
+        /// <param name="cancellationToken">Token de cancelación</param>
+        /// <returns>Usuario encontrado o null</returns>
+        public async Task<User> GetByIdIncludingInactiveAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            return await _dbSet
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+        }
+
+        /// <summary>
+        /// Obtiene todos los usuarios incluyendo los inactivos
+        /// </summary>
+        /// <param name="cancellationToken">Token de cancelación</param>
+        /// <returns>Lista de todos los usuarios, activos e inactivos</returns>
+        public async Task<IEnumerable<User>> GetAllUsersIncludingInactiveAsync(CancellationToken cancellationToken = default)
+        {
+            return await _dbSet
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .ToListAsync(cancellationToken);
+        }
     }
 }

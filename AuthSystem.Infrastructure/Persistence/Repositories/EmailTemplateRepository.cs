@@ -54,7 +54,20 @@ namespace AuthSystem.Infrastructure.Persistence.Repositories
         public async Task<EmailTemplate> GetByNameAsync(string name)
         {
             return await _context.EmailTemplates
-                .FirstOrDefaultAsync(t => t.Name == name && t.IsActive);
+                .Where(t => t.Name == name && t.IsActive)
+                .Select(t => new EmailTemplate
+                {
+                    Id = t.Id,
+                    Name = t.Name,
+                    Subject = t.Subject,
+                    HtmlContent = t.HtmlContent,
+                    TextContent = t.TextContent,
+                    IsActive = t.IsActive,
+                    Description = t.Description,
+                    CreatedAt = t.CreatedAt,
+                    CreatedBy = t.CreatedBy
+                })
+                .FirstOrDefaultAsync();
         }
 
         /// <summary>

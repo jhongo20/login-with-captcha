@@ -71,6 +71,11 @@ namespace AuthSystem.Domain.Interfaces
         IEmailTemplateRepository EmailTemplates { get; }
 
         /// <summary>
+        /// Repositorio de códigos de activación
+        /// </summary>
+        IActivationCodeRepository ActivationCodes { get; }
+
+        /// <summary>
         /// Guarda los cambios en la base de datos
         /// </summary>
         /// <param name="cancellationToken">Token de cancelación</param>

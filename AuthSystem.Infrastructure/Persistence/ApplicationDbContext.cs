@@ -85,6 +85,11 @@ namespace AuthSystem.Infrastructure.Persistence
         public DbSet<EmailTemplate> EmailTemplates { get; set; }
 
         /// <summary>
+        /// Códigos de activación
+        /// </summary>
+        public DbSet<ActivationCode> ActivationCodes { get; set; }
+
+        /// <summary>
         /// Configuración del modelo
         /// </summary>
         /// <param name="modelBuilder">Constructor de modelos</param>
@@ -307,14 +312,27 @@ namespace AuthSystem.Infrastructure.Persistence
                 entity.ToTable("EmailTemplates");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
-                entity.Property(e => e.Subject).HasMaxLength(200);
+                entity.Property(e => e.Subject).HasMaxLength(200).IsRequired();
                 entity.Property(e => e.HtmlContent).IsRequired();
                 entity.Property(e => e.TextContent).IsRequired();
-                entity.Property(e => e.Description).HasMaxLength(200);
-                entity.Property(e => e.CreatedBy).HasMaxLength(50);
-                entity.Property(e => e.LastModifiedBy).HasMaxLength(50);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.CreatedBy).HasMaxLength(100);
+                entity.Property(e => e.UpdatedBy).HasMaxLength(100);
+            });
 
-                entity.HasIndex(e => e.Name).IsUnique();
+            modelBuilder.Entity<ActivationCode>(entity =>
+            {
+                entity.ToTable("ActivationCodes");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Code).HasMaxLength(10).IsRequired();
+                entity.Property(e => e.CreatedBy).HasMaxLength(100);
+                entity.Property(e => e.UpdatedBy).HasMaxLength(100);
+                
+                // Relación con User
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // Configuración de datos semilla

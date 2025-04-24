@@ -52,5 +52,20 @@ namespace AuthSystem.Domain.Interfaces.Repositories
         /// <param name="cancellationToken">Token de cancelación</param>
         /// <returns>Lista de usuarios con el rol especificado</returns>
         Task<IEnumerable<User>> GetByRoleAsync(Guid roleId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Obtiene todos los usuarios incluyendo los inactivos
+        /// </summary>
+        /// <param name="cancellationToken">Token de cancelación</param>
+        /// <returns>Lista de todos los usuarios, activos e inactivos</returns>
+        Task<IEnumerable<User>> GetAllUsersIncludingInactiveAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Obtiene un usuario por su ID incluyendo inactivos
+        /// </summary>
+        /// <param name="id">ID del usuario</param>
+        /// <param name="cancellationToken">Token de cancelación</param>
+        /// <returns>Usuario encontrado o null</returns>
+        Task<User> GetByIdIncludingInactiveAsync(Guid id, CancellationToken cancellationToken = default);
     }
 }

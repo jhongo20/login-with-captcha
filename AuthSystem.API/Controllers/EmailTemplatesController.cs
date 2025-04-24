@@ -52,9 +52,7 @@ namespace AuthSystem.API.Controllers
                     Description = t.Description,
                     IsActive = t.IsActive,
                     CreatedAt = t.CreatedAt,
-                    CreatedBy = t.CreatedBy,
-                    LastModifiedAt = t.LastModifiedAt,
-                    LastModifiedBy = t.LastModifiedBy
+                    CreatedBy = t.CreatedBy
                 });
 
                 return Ok(templateDtos);
@@ -121,9 +119,7 @@ namespace AuthSystem.API.Controllers
                     Description = request.Description,
                     IsActive = request.IsActive,
                     CreatedAt = DateTime.UtcNow,
-                    CreatedBy = userName,
-                    LastModifiedAt = DateTime.UtcNow,
-                    LastModifiedBy = userName
+                    CreatedBy = userName
                 };
 
                 // Guardar la plantilla
@@ -166,13 +162,12 @@ namespace AuthSystem.API.Controllers
                 var userName = User.FindFirst(ClaimTypes.Name)?.Value ?? "System";
 
                 // Actualizar la plantilla
+                // No actualizamos Name porque no está en el request
                 template.Subject = request.Subject;
                 template.HtmlContent = request.HtmlContent;
                 template.TextContent = request.TextContent;
                 template.Description = request.Description;
                 template.IsActive = request.IsActive;
-                template.LastModifiedAt = DateTime.UtcNow;
-                template.LastModifiedBy = userName;
 
                 // Guardar los cambios
                 await _unitOfWork.EmailTemplates.UpdateAsync(template);

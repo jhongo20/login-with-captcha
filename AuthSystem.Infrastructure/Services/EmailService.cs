@@ -177,6 +177,14 @@ namespace AuthSystem.Infrastructure.Services
 
                 // Crear el cuerpo del mensaje
                 var builder = new BodyBuilder();
+                
+                // Asegurarse de que siempre haya contenido HTML
+                if (string.IsNullOrWhiteSpace(htmlContent))
+                {
+                    // Si no hay contenido HTML, convertir el texto plano a HTML básico
+                    htmlContent = $"<html><body><pre>{textContent}</pre></body></html>";
+                }
+                
                 builder.HtmlBody = htmlContent;
                 builder.TextBody = textContent;
 

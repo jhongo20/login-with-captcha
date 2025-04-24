@@ -82,9 +82,7 @@ namespace AuthSystem.Infrastructure.Persistence.Migrations
                     Description = "Plantilla para el correo de bienvenida cuando se crea un usuario",
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
-                    CreatedBy = "System",
-                    LastModifiedAt = DateTime.UtcNow,
-                    LastModifiedBy = "System"
+                    CreatedBy = "System"
                 },
 
                 // Plantilla para la actualización de usuarios
@@ -148,9 +146,7 @@ namespace AuthSystem.Infrastructure.Persistence.Migrations
                     Description = "Plantilla para el correo de notificación cuando se actualiza un usuario",
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
-                    CreatedBy = "System",
-                    LastModifiedAt = DateTime.UtcNow,
-                    LastModifiedBy = "System"
+                    CreatedBy = "System"
                 },
 
                 // Plantilla para el código de activación
@@ -211,9 +207,7 @@ namespace AuthSystem.Infrastructure.Persistence.Migrations
                     Description = "Plantilla para el correo con código de activación",
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
-                    CreatedBy = "System",
-                    LastModifiedAt = DateTime.UtcNow,
-                    LastModifiedBy = "System"
+                    CreatedBy = "System"
                 },
 
                 // Plantilla para el restablecimiento de contraseña
@@ -277,9 +271,7 @@ namespace AuthSystem.Infrastructure.Persistence.Migrations
                     Description = "Plantilla para el correo de restablecimiento de contraseña",
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
-                    CreatedBy = "System",
-                    LastModifiedAt = DateTime.UtcNow,
-                    LastModifiedBy = "System"
+                    CreatedBy = "System"
                 }
             };
 

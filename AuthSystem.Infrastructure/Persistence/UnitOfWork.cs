@@ -29,6 +29,7 @@ namespace AuthSystem.Infrastructure.Persistence
         private IPermissionModuleRepository _permissionModules;
         private IPermissionRouteRepository _permissionRoutes;
         private IEmailTemplateRepository _emailTemplates;
+        private IActivationCodeRepository _activationCodes;
 
         /// <summary>
         /// Constructor
@@ -100,6 +101,11 @@ namespace AuthSystem.Infrastructure.Persistence
         /// Repositorio de plantillas de correo electrónico
         /// </summary>
         public IEmailTemplateRepository EmailTemplates => _emailTemplates ??= new EmailTemplateRepository(_context);
+
+        /// <summary>
+        /// Repositorio de códigos de activación
+        /// </summary>
+        public IActivationCodeRepository ActivationCodes => _activationCodes ??= new ActivationCodeRepository(_context);
 
         /// <summary>
         /// Guarda los cambios en la base de datos
