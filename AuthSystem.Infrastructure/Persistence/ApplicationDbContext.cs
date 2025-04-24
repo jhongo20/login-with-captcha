@@ -78,6 +78,11 @@ namespace AuthSystem.Infrastructure.Persistence
         /// Relaciones entre permisos y rutas
         /// </summary>
         public DbSet<PermissionRoute> PermissionRoutes { get; set; }
+        
+        /// <summary>
+        /// Plantillas de correo electrónico
+        /// </summary>
+        public DbSet<EmailTemplate> EmailTemplates { get; set; }
 
         /// <summary>
         /// Configuración del modelo
@@ -297,6 +302,21 @@ namespace AuthSystem.Infrastructure.Persistence
                 entity.HasIndex(e => new { e.PermissionId, e.RouteId }).IsUnique();
             });
 
+            modelBuilder.Entity<EmailTemplate>(entity =>
+            {
+                entity.ToTable("EmailTemplates");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.Subject).HasMaxLength(200);
+                entity.Property(e => e.HtmlContent).IsRequired();
+                entity.Property(e => e.TextContent).IsRequired();
+                entity.Property(e => e.Description).HasMaxLength(200);
+                entity.Property(e => e.CreatedBy).HasMaxLength(50);
+                entity.Property(e => e.LastModifiedBy).HasMaxLength(50);
+
+                entity.HasIndex(e => e.Name).IsUnique();
+            });
+
             // Configuración de datos semilla
             SeedData(modelBuilder);
         }
@@ -313,6 +333,9 @@ namespace AuthSystem.Infrastructure.Persistence
             SeedUserRoles(modelBuilder);
             SeedRolePermissions(modelBuilder);
             SeedModules(modelBuilder);
+            
+            // Sembrar plantillas de correo electrónico
+            Migrations.EmailTemplatesSeed.SeedEmailTemplates(modelBuilder);
         }
 
         private void SeedModules(ModelBuilder modelBuilder)

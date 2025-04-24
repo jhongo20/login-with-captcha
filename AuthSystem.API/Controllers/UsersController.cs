@@ -8,6 +8,7 @@ using AuthSystem.Domain.Interfaces;
 using AuthSystem.Domain.Interfaces.Services;
 using AuthSystem.Domain.Models.Auth;
 using AuthSystem.Domain.Models.Users;
+using AuthSystem.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -25,6 +26,7 @@ namespace AuthSystem.API.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IAccountLockoutService _accountLockoutService;
         private readonly ILogger<UsersController> _logger;
+        private readonly UserNotificationService _userNotificationService;
 
         /// <summary>
         /// Constructor
@@ -32,14 +34,17 @@ namespace AuthSystem.API.Controllers
         /// <param name="unitOfWork">Unidad de trabajo</param>
         /// <param name="accountLockoutService">Servicio de bloqueo de cuentas</param>
         /// <param name="logger">Logger</param>
+        /// <param name="userNotificationService">Servicio de notificaciones de usuario</param>
         public UsersController(
             IUnitOfWork unitOfWork,
             IAccountLockoutService accountLockoutService,
-            ILogger<UsersController> logger)
+            ILogger<UsersController> logger,
+            UserNotificationService userNotificationService)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _accountLockoutService = accountLockoutService ?? throw new ArgumentNullException(nameof(accountLockoutService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _userNotificationService = userNotificationService ?? throw new ArgumentNullException(nameof(userNotificationService));
         }
 
         /// <summary>
@@ -249,6 +254,9 @@ namespace AuthSystem.API.Controllers
                 // Obtener los roles asignados
                 var assignedRoles = await _unitOfWork.Roles.GetByUserAsync(user.Id);
 
+                // Enviar correo electrónico de bienvenida
+                await _userNotificationService.SendWelcomeEmailAsync(user);
+
                 var userDto = new UserDto
                 {
                     Id = user.Id,
@@ -410,6 +418,9 @@ namespace AuthSystem.API.Controllers
 
                 // Obtener los roles actualizados
                 var updatedRoles = await _unitOfWork.Roles.GetByUserAsync(user.Id);
+
+                // Enviar correo electrónico de actualización de cuenta
+                await _userNotificationService.SendAccountUpdatedEmailAsync(user);
 
                 var userDto = new UserDto
                 {

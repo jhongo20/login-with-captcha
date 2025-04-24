@@ -66,6 +66,11 @@ namespace AuthSystem.Domain.Interfaces
         IPermissionRouteRepository PermissionRoutes { get; }
 
         /// <summary>
+        /// Repositorio de plantillas de correo electrónico
+        /// </summary>
+        IEmailTemplateRepository EmailTemplates { get; }
+
+        /// <summary>
         /// Guarda los cambios en la base de datos
         /// </summary>
         /// <param name="cancellationToken">Token de cancelación</param>

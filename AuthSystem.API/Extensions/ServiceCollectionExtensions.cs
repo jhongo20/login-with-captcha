@@ -41,11 +41,21 @@ namespace AuthSystem.API.Extensions
             services.AddScoped<IUserRoleRepository, UserRoleRepository>();
             services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
             services.AddScoped<IUserSessionRepository, UserSessionRepository>();
+            services.AddScoped<IModuleRepository, ModuleRepository>();
+            services.AddScoped<IRouteRepository, RouteRepository>();
+            services.AddScoped<IRoleRouteRepository, RoleRouteRepository>();
+            services.AddScoped<IPermissionModuleRepository, PermissionModuleRepository>();
+            services.AddScoped<IPermissionRouteRepository, PermissionRouteRepository>();
+            services.AddScoped<IEmailTemplateRepository, EmailTemplateRepository>();
 
             // Registrar servicios
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IJwtService, JwtService>();
             services.AddScoped<IAccountLockoutService, AccountLockoutService>();
+
+            // Registrar servicio de correo electrónico
+            services.AddScoped<IEmailService, EmailService>();
+            services.AddScoped<UserNotificationService>();
 
             // Registrar CaptchaService (sin HttpClientFactory)
             services.AddScoped<ICaptchaService, CaptchaService>();

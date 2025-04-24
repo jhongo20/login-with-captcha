@@ -28,6 +28,7 @@ namespace AuthSystem.Infrastructure.Persistence
         private IRoleRouteRepository _roleRoutes;
         private IPermissionModuleRepository _permissionModules;
         private IPermissionRouteRepository _permissionRoutes;
+        private IEmailTemplateRepository _emailTemplates;
 
         /// <summary>
         /// Constructor
@@ -94,6 +95,11 @@ namespace AuthSystem.Infrastructure.Persistence
         /// Repositorio de relaciones entre permisos y rutas
         /// </summary>
         public IPermissionRouteRepository PermissionRoutes => _permissionRoutes ??= new PermissionRouteRepository(_context);
+
+        /// <summary>
+        /// Repositorio de plantillas de correo electrónico
+        /// </summary>
+        public IEmailTemplateRepository EmailTemplates => _emailTemplates ??= new EmailTemplateRepository(_context);
 
         /// <summary>
         /// Guarda los cambios en la base de datos
