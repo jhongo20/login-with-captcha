@@ -1,4 +1,5 @@
 using System;
+using AuthSystem.Domain.Common.Enums;
 
 namespace AuthSystem.Domain.Models.Users
 {
@@ -31,6 +32,16 @@ namespace AuthSystem.Domain.Models.Users
         /// Indica si el usuario está activo
         /// </summary>
         public bool IsActive { get; set; }
+
+        /// <summary>
+        /// Estado del usuario
+        /// </summary>
+        public UserStatus UserStatus { get; set; }
+
+        /// <summary>
+        /// Nombre descriptivo del estado del usuario
+        /// </summary>
+        public string StatusName => UserStatus.ToString();
 
         /// <summary>
         /// Tipo de usuario

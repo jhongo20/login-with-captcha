@@ -79,7 +79,7 @@ namespace AuthSystem.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error al enviar correo de actualización de cuenta al usuario: {user.Email}");
+                _logger.LogError(ex, "Error al enviar correo electrónico de actualización de cuenta al usuario: {Email}", user.Email);
                 return false;
             }
         }
@@ -144,6 +144,65 @@ namespace AuthSystem.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error al enviar correo de restablecimiento de contraseña al usuario: {user.Email}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Envía un correo electrónico de suspensión de cuenta al usuario
+        /// </summary>
+        /// <param name="user">Usuario</param>
+        /// <returns>True si el correo se envió correctamente, False en caso contrario</returns>
+        public async Task<bool> SendAccountSuspendedEmailAsync(User user)
+        {
+            try
+            {
+                var templateData = new Dictionary<string, string>
+                {
+                    { "FullName", user.FullName },
+                    { "Username", user.Username },
+                    { "Email", user.Email },
+                    { "CurrentDate", DateTime.Now.ToString("dd/MM/yyyy") },
+                    { "SuspensionReason", "Decisión administrativa" }
+                };
+
+                return await _emailService.SendEmailAsync(
+                    "AccountSuspended",
+                    user.Email,
+                    templateData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al enviar correo electrónico de suspensión de cuenta al usuario: {Email}", user.Email);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Envía un correo electrónico de activación de cuenta al usuario
+        /// </summary>
+        /// <param name="user">Usuario</param>
+        /// <returns>True si el correo se envió correctamente, False en caso contrario</returns>
+        public async Task<bool> SendAccountActivatedEmailAsync(User user)
+        {
+            try
+            {
+                var templateData = new Dictionary<string, string>
+                {
+                    { "FullName", user.FullName },
+                    { "Username", user.Username },
+                    { "Email", user.Email },
+                    { "CurrentDate", DateTime.Now.ToString("dd/MM/yyyy") }
+                };
+
+                return await _emailService.SendEmailAsync(
+                    "AccountActivated",
+                    user.Email,
+                    templateData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al enviar correo electrónico de activación de cuenta al usuario: {Email}", user.Email);
                 return false;
             }
         }

@@ -36,6 +36,20 @@ namespace AuthSystem.Domain.Entities
         public UserType UserType { get; set; }
 
         /// <summary>
+        /// Estado actual del usuario (Activo, Inactivo, Bloqueado, Suspendido, Eliminado)
+        /// </summary>
+        public UserStatus UserStatus { get; set; } = UserStatus.Active;
+
+        /// <summary>
+        /// Indica si el usuario está activo (compatible con versiones anteriores)
+        /// </summary>
+        public bool IsActive 
+        { 
+            get => UserStatus == UserStatus.Active;
+            set => UserStatus = value ? UserStatus.Active : UserStatus.Inactive;
+        }
+
+        /// <summary>
         /// Número de teléfono del usuario
         /// </summary>
         public string? PhoneNumber { get; set; }

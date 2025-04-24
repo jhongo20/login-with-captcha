@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using AuthSystem.Domain.Common.Enums;
 using AuthSystem.Domain.Entities;
 
 namespace AuthSystem.Domain.Interfaces.Repositories
@@ -57,7 +58,7 @@ namespace AuthSystem.Domain.Interfaces.Repositories
         /// Obtiene todos los usuarios incluyendo los inactivos
         /// </summary>
         /// <param name="cancellationToken">Token de cancelación</param>
-        /// <returns>Lista de todos los usuarios, activos e inactivos</returns>
+        /// <returns>Lista de todos los usuarios, independientemente de su estado</returns>
         Task<IEnumerable<User>> GetAllUsersIncludingInactiveAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
@@ -67,5 +68,22 @@ namespace AuthSystem.Domain.Interfaces.Repositories
         /// <param name="cancellationToken">Token de cancelación</param>
         /// <returns>Usuario encontrado o null</returns>
         Task<User> GetByIdIncludingInactiveAsync(Guid id, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Obtiene usuarios por su estado
+        /// </summary>
+        /// <param name="status">Estado del usuario</param>
+        /// <param name="cancellationToken">Token de cancelación</param>
+        /// <returns>Lista de usuarios con el estado especificado</returns>
+        Task<IEnumerable<User>> GetByStatusAsync(UserStatus status, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Actualiza el estado de un usuario
+        /// </summary>
+        /// <param name="userId">ID del usuario</param>
+        /// <param name="status">Nuevo estado</param>
+        /// <param name="cancellationToken">Token de cancelación</param>
+        /// <returns>True si la actualización fue exitosa</returns>
+        Task<bool> UpdateUserStatusAsync(Guid userId, UserStatus status, CancellationToken cancellationToken = default);
     }
 }

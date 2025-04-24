@@ -1,5 +1,7 @@
 using System;
 using System.Text;
+using System.IO;
+using System.Reflection;
 using AuthSystem.Domain.Interfaces;
 using AuthSystem.Domain.Interfaces.Services;
 using AuthSystem.Domain.Interfaces.Repositories;
@@ -144,10 +146,9 @@ namespace AuthSystem.API.Extensions
                     }
                 });
 
-                // Comentado para evitar el error de archivo XML no encontrado
-                // var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-                // var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-                // c.IncludeXmlComments(xmlPath);
+                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+                c.IncludeXmlComments(xmlPath);
             });
 
             return services;

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using AuthSystem.API.Models.Requests;
+using AuthSystem.Domain.Common.Enums;
 using AuthSystem.Domain.Entities;
 using AuthSystem.Domain.Interfaces;
 using AuthSystem.Domain.Interfaces.Services;
@@ -65,7 +67,7 @@ namespace AuthSystem.API.Controllers
         {
             try
             {
-                var users = await _unitOfWork.Users.GetAllAsync();
+                var users = await _unitOfWork.Users.GetAllUsersIncludingInactiveAsync();
                 var userDtos = users.Select(u => new UserDto
                 {
                     Id = u.Id,
@@ -73,6 +75,7 @@ namespace AuthSystem.API.Controllers
                     Email = u.Email,
                     FullName = u.FullName,
                     IsActive = u.IsActive,
+                    UserStatus = u.UserStatus,
                     UserType = u.UserType.ToString(),
                     CreatedAt = u.CreatedAt
                 }).ToList();
@@ -90,115 +93,18 @@ namespace AuthSystem.API.Controllers
         }
 
         /// <summary>
-        /// Obtiene todos los usuarios incluyendo los inactivos
-        /// </summary>
-        /// <returns>Lista de todos los usuarios, activos e inactivos</returns>
-        [HttpGet("all")]
-        [Authorize(Roles = "Admin")]
-        [ProducesResponseType(typeof(IEnumerable<UserDto>), 200)]
-        [ProducesResponseType(typeof(ErrorResponse), 401)]
-        [ProducesResponseType(typeof(ErrorResponse), 403)]
-        [ProducesResponseType(typeof(ErrorResponse), 500)]
-        public async Task<IActionResult> GetAllUsersIncludingInactive()
-        {
-            try
-            {
-                var users = await _unitOfWork.Users.GetAllUsersIncludingInactiveAsync();
-                var userDtos = users.Select(u => new UserDto
-                {
-                    Id = u.Id,
-                    Username = u.Username,
-                    Email = u.Email,
-                    FullName = u.FullName,
-                    IsActive = u.IsActive,
-                    UserType = u.UserType.ToString(),
-                    CreatedAt = u.CreatedAt
-                }).ToList();
-
-                return Ok(userDtos);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener todos los usuarios incluyendo inactivos");
-                return StatusCode(500, new ErrorResponse
-                {
-                    Message = "Error al obtener todos los usuarios"
-                });
-            }
-        }
-
-        /// <summary>
         /// Obtiene un usuario por su ID
         /// </summary>
         /// <param name="id">ID del usuario</param>
         /// <returns>Usuario</returns>
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(UserDto), 200)]
         [ProducesResponseType(typeof(ErrorResponse), 401)]
         [ProducesResponseType(typeof(ErrorResponse), 403)]
         [ProducesResponseType(typeof(ErrorResponse), 404)]
         [ProducesResponseType(typeof(ErrorResponse), 500)]
         public async Task<IActionResult> GetUserById(Guid id)
-        {
-            try
-            {
-                // Verificar si el usuario tiene permiso para ver este usuario
-                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var isAdmin = User.IsInRole("Admin");
-
-                if (!isAdmin && currentUserId != id.ToString())
-                {
-                    return Forbid();
-                }
-
-                var user = await _unitOfWork.Users.GetByIdAsync(id);
-                if (user == null)
-                {
-                    return NotFound(new ErrorResponse
-                    {
-                        Message = "Usuario no encontrado"
-                    });
-                }
-
-                var roles = await _unitOfWork.Roles.GetByUserAsync(id);
-
-                var userDto = new UserDto
-                {
-                    Id = user.Id,
-                    Username = user.Username,
-                    Email = user.Email,
-                    FullName = user.FullName,
-                    IsActive = user.IsActive,
-                    UserType = user.UserType.ToString(),
-                    CreatedAt = user.CreatedAt,
-                    Roles = roles.Select(r => r.Name).ToArray()
-                };
-
-                return Ok(userDto);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener el usuario con ID {UserId}", id);
-                return StatusCode(500, new ErrorResponse
-                {
-                    Message = "Error al obtener el usuario"
-                });
-            }
-        }
-
-        /// <summary>
-        /// Obtiene un usuario por su ID incluyendo inactivos
-        /// </summary>
-        /// <param name="id">ID del usuario</param>
-        /// <returns>Usuario</returns>
-        [HttpGet("all/{id}")]
-        [Authorize(Roles = "Admin")]
-        [ProducesResponseType(typeof(UserDto), 200)]
-        [ProducesResponseType(typeof(ErrorResponse), 401)]
-        [ProducesResponseType(typeof(ErrorResponse), 403)]
-        [ProducesResponseType(typeof(ErrorResponse), 404)]
-        [ProducesResponseType(typeof(ErrorResponse), 500)]
-        public async Task<IActionResult> GetUserByIdIncludingInactive(Guid id)
         {
             try
             {
@@ -220,6 +126,7 @@ namespace AuthSystem.API.Controllers
                     Email = user.Email,
                     FullName = user.FullName,
                     IsActive = user.IsActive,
+                    UserStatus = user.UserStatus,
                     UserType = user.UserType.ToString(),
                     CreatedAt = user.CreatedAt,
                     Roles = roles.Select(r => r.Name).ToArray()
@@ -229,7 +136,7 @@ namespace AuthSystem.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener el usuario con ID {UserId} incluyendo inactivos", id);
+                _logger.LogError(ex, "Error al obtener el usuario con ID {UserId}", id);
                 return StatusCode(500, new ErrorResponse
                 {
                     Message = "Error al obtener el usuario"
@@ -446,6 +353,7 @@ namespace AuthSystem.API.Controllers
                     Email = user.Email,
                     FullName = user.FullName,
                     IsActive = user.IsActive,
+                    UserStatus = user.UserStatus,
                     UserType = user.UserType.ToString(),
                     CreatedAt = user.CreatedAt,
                     Roles = assignedRoles.Select(r => r.Name).ToArray()
@@ -773,168 +681,6 @@ namespace AuthSystem.API.Controllers
         /// <param name="request">Datos del usuario</param>
         /// <returns>Usuario actualizado</returns>
         [HttpPut("{id}")]
-        [ProducesResponseType(typeof(UserDto), 200)]
-        [ProducesResponseType(typeof(ErrorResponse), 400)]
-        [ProducesResponseType(typeof(ErrorResponse), 401)]
-        [ProducesResponseType(typeof(ErrorResponse), 403)]
-        [ProducesResponseType(typeof(ErrorResponse), 404)]
-        [ProducesResponseType(typeof(ErrorResponse), 500)]
-        public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserRequest request)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(new ErrorResponse
-                    {
-                        Message = "Datos de usuario inválidos",
-                        Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()
-                    });
-                }
-
-                // Verificar si el usuario tiene permiso para actualizar este usuario
-                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var isAdmin = User.IsInRole("Admin");
-
-                if (!isAdmin && currentUserId != id.ToString())
-                {
-                    return Forbid();
-                }
-
-                var user = await _unitOfWork.Users.GetByIdAsync(id);
-                if (user == null)
-                {
-                    return NotFound(new ErrorResponse
-                    {
-                        Message = "Usuario no encontrado"
-                    });
-                }
-
-                // Verificar si el nombre de usuario ya existe
-                if (!string.IsNullOrEmpty(request.Username) && 
-                    request.Username != user.Username && 
-                    await _unitOfWork.Users.UsernameExistsAsync(request.Username, id))
-                {
-                    return BadRequest(new ErrorResponse
-                    {
-                        Message = "El nombre de usuario ya está en uso"
-                    });
-                }
-
-                // Verificar si el correo electrónico ya existe
-                if (!string.IsNullOrEmpty(request.Email) && 
-                    request.Email != user.Email && 
-                    await _unitOfWork.Users.EmailExistsAsync(request.Email, id))
-                {
-                    return BadRequest(new ErrorResponse
-                    {
-                        Message = "El correo electrónico ya está en uso"
-                    });
-                }
-
-                // Actualizar los datos del usuario
-                if (!string.IsNullOrEmpty(request.Username))
-                {
-                    user.Username = request.Username;
-                }
-
-                if (!string.IsNullOrEmpty(request.Email))
-                {
-                    user.Email = request.Email;
-                }
-
-                if (!string.IsNullOrEmpty(request.FullName))
-                {
-                    user.FullName = request.FullName;
-                }
-
-                if (!string.IsNullOrEmpty(request.Password))
-                {
-                    user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
-                    user.SecurityStamp = Guid.NewGuid().ToString();
-                }
-
-                if (request.IsActive.HasValue)
-                {
-                    user.IsActive = request.IsActive.Value;
-                }
-
-                await _unitOfWork.Users.UpdateAsync(user);
-
-                // Actualizar roles si el usuario es administrador
-                if (isAdmin && request.Roles != null)
-                {
-                    // Obtener roles actuales
-                    var currentRoles = await _unitOfWork.UserRoles.GetByUserAsync(id);
-                    
-                    // Eliminar roles que ya no están en la lista
-                    foreach (var userRole in currentRoles)
-                    {
-                        if (!request.Roles.Contains(userRole.Role.Name))
-                        {
-                            await _unitOfWork.UserRoles.DeleteAsync(userRole);
-                        }
-                    }
-
-                    // Agregar nuevos roles
-                    foreach (var roleName in request.Roles)
-                    {
-                        var role = await _unitOfWork.Roles.GetByNameAsync(roleName);
-                        if (role != null && !currentRoles.Any(ur => ur.RoleId == role.Id))
-                        {
-                            var userRole = new UserRole
-                            {
-                                UserId = user.Id,
-                                RoleId = role.Id,
-                                CreatedAt = DateTime.UtcNow,
-                                CreatedBy = User.FindFirst(ClaimTypes.Name)?.Value ?? "System",
-                                IsActive = true
-                            };
-
-                            await _unitOfWork.UserRoles.AddAsync(userRole);
-                        }
-                    }
-                }
-
-                await _unitOfWork.SaveChangesAsync();
-
-                // Obtener los roles actualizados
-                var updatedRoles = await _unitOfWork.Roles.GetByUserAsync(user.Id);
-
-                // Enviar correo electrónico de actualización de cuenta
-                await _userNotificationService.SendAccountUpdatedEmailAsync(user);
-
-                var userDto = new UserDto
-                {
-                    Id = user.Id,
-                    Username = user.Username,
-                    Email = user.Email,
-                    FullName = user.FullName,
-                    IsActive = user.IsActive,
-                    UserType = user.UserType.ToString(),
-                    CreatedAt = user.CreatedAt,
-                    Roles = updatedRoles.Select(r => r.Name).ToArray()
-                };
-
-                return Ok(userDto);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al actualizar el usuario con ID {UserId}", id);
-                return StatusCode(500, new ErrorResponse
-                {
-                    Message = "Error al actualizar el usuario"
-                });
-            }
-        }
-
-        /// <summary>
-        /// Actualiza un usuario existente incluyendo inactivos
-        /// </summary>
-        /// <param name="id">ID del usuario</param>
-        /// <param name="request">Datos del usuario</param>
-        /// <returns>Usuario actualizado</returns>
-        [HttpPut("all/{id}")]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(UserDto), 200)]
         [ProducesResponseType(typeof(ErrorResponse), 400)]
@@ -942,7 +688,7 @@ namespace AuthSystem.API.Controllers
         [ProducesResponseType(typeof(ErrorResponse), 403)]
         [ProducesResponseType(typeof(ErrorResponse), 404)]
         [ProducesResponseType(typeof(ErrorResponse), 500)]
-        public async Task<IActionResult> UpdateUserIncludingInactive(Guid id, [FromBody] UpdateUserRequest request)
+        public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserRequest request)
         {
             try
             {
@@ -1018,31 +764,45 @@ namespace AuthSystem.API.Controllers
                     // Obtener roles existentes del usuario
                     var existingUserRoles = await _unitOfWork.UserRoles.GetByUserAsync(id);
                     
+                    // Obtener todos los roles disponibles
+                    var allRoles = await _unitOfWork.Roles.GetAllAsync();
+                    var roleNameToIdMap = allRoles.ToDictionary(r => r.Name, r => r.Id);
+                    
+                    // Convertir nombres de roles a IDs
+                    var requestedRoleIds = new List<Guid>();
+                    foreach (var roleName in request.Roles)
+                    {
+                        if (roleNameToIdMap.TryGetValue(roleName, out var roleId))
+                        {
+                            requestedRoleIds.Add(roleId);
+                        }
+                    }
+                    
                     // Eliminar roles que ya no están en la lista
                     foreach (var userRole in existingUserRoles)
                     {
-                        if (!request.Roles.Contains(userRole.Role.Name))
+                        if (!requestedRoleIds.Contains(userRole.RoleId))
                         {
                             await _unitOfWork.UserRoles.DeleteAsync(userRole);
                         }
                     }
 
                     // Agregar nuevos roles
-                    foreach (var roleName in request.Roles)
+                    var existingRoleIds = existingUserRoles.Select(ur => ur.RoleId).ToList();
+                    foreach (var roleId in requestedRoleIds)
                     {
-                        var role = await _unitOfWork.Roles.GetByNameAsync(roleName);
-                        if (role != null && !existingUserRoles.Any(ur => ur.RoleId == role.Id))
+                        if (!existingRoleIds.Contains(roleId))
                         {
-                            var userRole = new UserRole
+                            var role = await _unitOfWork.Roles.GetByIdAsync(roleId);
+                            if (role != null)
                             {
-                                UserId = user.Id,
-                                RoleId = role.Id,
-                                CreatedAt = DateTime.UtcNow,
-                                CreatedBy = User.FindFirst(ClaimTypes.Name)?.Value ?? "System",
-                                IsActive = true
-                            };
-
-                            await _unitOfWork.UserRoles.AddAsync(userRole);
+                                await _unitOfWork.UserRoles.AddAsync(new UserRole
+                                {
+                                    UserId = id,
+                                    RoleId = roleId,
+                                    CreatedBy = User.FindFirst(ClaimTypes.Name)?.Value ?? "System"
+                                });
+                            }
                         }
                     }
                 }
@@ -1063,6 +823,7 @@ namespace AuthSystem.API.Controllers
                     Email = user.Email,
                     FullName = user.FullName,
                     IsActive = user.IsActive,
+                    UserStatus = user.UserStatus,
                     UserType = user.UserType.ToString(),
                     CreatedAt = user.CreatedAt,
                     Roles = roles.Select(r => r.Name).ToArray()
@@ -1072,10 +833,83 @@ namespace AuthSystem.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al actualizar el usuario con ID {UserId} incluyendo inactivos", id);
+                _logger.LogError(ex, "Error al actualizar el usuario con ID {UserId}", id);
                 return StatusCode(500, new ErrorResponse
                 {
                     Message = "Error al actualizar el usuario"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Actualiza el estado de un usuario
+        /// </summary>
+        /// <param name="id">ID del usuario</param>
+        /// <param name="request">Estado del usuario</param>
+        /// <returns>Resultado de la operación</returns>
+        [HttpPatch("{id}/status")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(SuccessResponse), 200)]
+        [ProducesResponseType(typeof(ErrorResponse), 400)]
+        [ProducesResponseType(typeof(ErrorResponse), 401)]
+        [ProducesResponseType(typeof(ErrorResponse), 403)]
+        [ProducesResponseType(typeof(ErrorResponse), 404)]
+        [ProducesResponseType(typeof(ErrorResponse), 500)]
+        public async Task<IActionResult> UpdateUserStatus(Guid id, [FromBody] UpdateUserStatusRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new ErrorResponse
+                    {
+                        Message = "Estado de usuario inválido",
+                        Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()
+                    });
+                }
+
+                var user = await _unitOfWork.Users.GetByIdIncludingInactiveAsync(id);
+                if (user == null)
+                {
+                    return NotFound(new ErrorResponse
+                    {
+                        Message = "Usuario no encontrado"
+                    });
+                }
+
+                // Actualizar el estado del usuario
+                bool success = await _unitOfWork.Users.UpdateUserStatusAsync(id, request.Status, default);
+                if (!success)
+                {
+                    return StatusCode(500, new ErrorResponse
+                    {
+                        Message = "Error al actualizar el estado del usuario"
+                    });
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+
+                // Enviar notificación al usuario según el cambio de estado
+                if (request.Status == UserStatus.Suspended || request.Status == UserStatus.Locked)
+                {
+                    await _userNotificationService.SendAccountSuspendedEmailAsync(user);
+                }
+                else if (request.Status == UserStatus.Active)
+                {
+                    await _userNotificationService.SendAccountActivatedEmailAsync(user);
+                }
+
+                return Ok(new SuccessResponse
+                {
+                    Message = $"Estado del usuario actualizado correctamente a {request.Status}"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al actualizar el estado del usuario con ID {UserId}", id);
+                return StatusCode(500, new ErrorResponse
+                {
+                    Message = "Error al actualizar el estado del usuario"
                 });
             }
         }
