@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using AuthSystem.Domain.Common.Enums;
 
 namespace AuthSystem.Domain.Models.Auth
 {
@@ -45,6 +46,11 @@ namespace AuthSystem.Domain.Models.Auth
         /// Indica si el usuario está activo
         /// </summary>
         public bool? IsActive { get; set; }
+
+        /// <summary>
+        /// Estado del usuario
+        /// </summary>
+        public UserStatus? UserStatus { get; set; }
 
         /// <summary>
         /// Roles del usuario

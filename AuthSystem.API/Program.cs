@@ -36,7 +36,7 @@ builder.Services.AddResponseCompression(options =>
 var app = builder.Build();
 
 // Inicializar la base de datos
-if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
+if (false && (app.Environment.IsDevelopment() || app.Environment.IsProduction()))
 {
     // Inicializar la base de datos de forma asíncrona
     await DatabaseInitializer.InitializeAsync(app.Services);

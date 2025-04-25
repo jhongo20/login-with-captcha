@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 using AuthSystem.Domain.Entities;
 using AuthSystem.Domain.Interfaces;
 using AuthSystem.Domain.Interfaces.Services;
+using AuthSystem.Domain.Interfaces.Repositories;
 using AuthSystem.Domain.Models.Auth;
+using AuthSystem.Domain.Common.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -79,14 +81,39 @@ namespace AuthSystem.API.Controllers
 
                 // Buscar el usuario por nombre de usuario
                 var user = await _unitOfWork.Users.GetByUsernameAsync(request.Username);
+                
+                // Si no se encuentra el usuario, verificar si existe pero con un estado diferente a Active
                 if (user == null)
                 {
+                    var userRepository = _unitOfWork.Users as IUserRepository;
+                    if (userRepository != null)
+                    {
+                        var inactiveUser = await userRepository.GetByUsernameIncludingInactiveAsync(request.Username);
+                        if (inactiveUser != null)
+                        {
+                            // El usuario existe pero tiene un estado diferente a Active
+                            string statusMessage = inactiveUser.UserStatus switch
+                            {
+                                UserStatus.Inactive => "Su cuenta está inactiva. Por favor contacte al administrador para activarla.",
+                                UserStatus.Locked => "Su cuenta está bloqueada debido a múltiples intentos fallidos de inicio de sesión. Por favor contacte al administrador.",
+                                UserStatus.Suspended => "Su cuenta ha sido suspendida. Por favor contacte al administrador para más información.",
+                                UserStatus.Deleted => "Esta cuenta ha sido eliminada y ya no está disponible.",
+                                _ => "Su cuenta no está activa. Por favor contacte al administrador."
+                            };
+                            
+                            return StatusCode(403, new ErrorResponse
+                            {
+                                Message = statusMessage
+                            });
+                        }
+                    }
+                    
                     return Unauthorized(new ErrorResponse
                     {
                         Message = "Nombre de usuario o contraseña incorrectos"
                     });
                 }
-
+                
                 // Verificar si la cuenta está bloqueada
                 if (await _accountLockoutService.IsLockedOutAsync(user.Id))
                 {
@@ -303,6 +330,52 @@ namespace AuthSystem.API.Controllers
                 }
 
                 _logger.LogInformation("reCAPTCHA válido, procediendo con el inicio de sesión");
+                
+                // Verificar si el usuario existe
+                var user = await _unitOfWork.Users.GetByIdAsync(Guid.Empty); // Solo para verificar si existe UserStatus
+                
+                // Verificar si el usuario tiene la propiedad UserStatus
+                bool hasUserStatusProperty = user?.GetType().GetProperty("UserStatus") != null;
+                
+                if (hasUserStatusProperty)
+                {
+                    // Si tiene la propiedad UserStatus, usar la implementación nueva
+                    var userRepository = _unitOfWork.Users as IUserRepository;
+                    if (userRepository != null)
+                    {
+                        var fullUser = await userRepository.GetByUsernameIncludingInactiveAsync(request.Username);
+                        
+                        if (fullUser == null)
+                        {
+                            _logger.LogWarning("Usuario no encontrado: {Username}", request.Username);
+                            return Unauthorized(new ErrorResponse
+                            {
+                                Message = "Nombre de usuario o contraseña incorrectos"
+                            });
+                        }
+                        
+                        // Verificar el estado del usuario y mostrar mensajes específicos
+                        if (fullUser.UserStatus != UserStatus.Active)
+                        {
+                            _logger.LogWarning("Intento de inicio de sesión con usuario en estado {Status}: {Username}", 
+                                fullUser.UserStatus, request.Username);
+                            
+                            string statusMessage = fullUser.UserStatus switch
+                            {
+                                UserStatus.Inactive => "Su cuenta está inactiva. Por favor contacte al administrador para activarla.",
+                                UserStatus.Locked => "Su cuenta está bloqueada debido a múltiples intentos fallidos de inicio de sesión. Por favor contacte al administrador.",
+                                UserStatus.Suspended => "Su cuenta ha sido suspendida. Por favor contacte al administrador para más información.",
+                                UserStatus.Deleted => "Esta cuenta ha sido eliminada y ya no está disponible.",
+                                _ => "Su cuenta no está activa. Por favor contacte al administrador."
+                            };
+                            
+                            return StatusCode(403, new ErrorResponse
+                            {
+                                Message = statusMessage
+                            });
+                        }
+                    }
+                }
                 
                 // Continuar con el proceso normal de inicio de sesión
                 var loginRequest = new LoginRequest

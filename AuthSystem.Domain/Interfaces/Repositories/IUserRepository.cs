@@ -70,6 +70,14 @@ namespace AuthSystem.Domain.Interfaces.Repositories
         Task<User> GetByIdIncludingInactiveAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Obtiene un usuario por su nombre de usuario sin filtrar por estado
+        /// </summary>
+        /// <param name="username">Nombre de usuario</param>
+        /// <param name="cancellationToken">Token de cancelación</param>
+        /// <returns>Usuario encontrado o null</returns>
+        Task<User> GetByUsernameIncludingInactiveAsync(string username, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Obtiene usuarios por su estado
         /// </summary>
         /// <param name="status">Estado del usuario</param>

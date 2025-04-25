@@ -195,6 +195,25 @@ namespace AuthSystem.Infrastructure.Persistence.Repositories
         }
 
         /// <summary>
+        /// Obtiene un usuario por su nombre de usuario sin filtrar por estado
+        /// </summary>
+        /// <param name="username">Nombre de usuario</param>
+        /// <param name="cancellationToken">Token de cancelación</param>
+        /// <returns>Usuario encontrado o null</returns>
+        public async Task<User> GetByUsernameIncludingInactiveAsync(string username, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrEmpty(username))
+            {
+                throw new ArgumentException("El nombre de usuario no puede ser nulo o vacío", nameof(username));
+            }
+
+            return await _dbSet
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Username == username, cancellationToken);
+        }
+
+        /// <summary>
         /// Actualiza el estado de un usuario
         /// </summary>
         /// <param name="userId">ID del usuario</param>

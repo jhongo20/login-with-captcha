@@ -758,6 +758,39 @@ namespace AuthSystem.API.Controllers
                     user.IsActive = request.IsActive.Value;
                 }
 
+                // Actualizar el estado del usuario si se especifica
+                if (request.UserStatus.HasValue)
+                {
+                    user.UserStatus = request.UserStatus.Value;
+                    
+                    // Registrar el cambio de estado en el log
+                    _logger.LogInformation($"Estado del usuario {user.Username} actualizado a {user.UserStatus}");
+                    
+                    // Enviar notificaciones según el nuevo estado
+                    if (user.UserStatus == UserStatus.Suspended)
+                    {
+                        try
+                        {
+                            await _userNotificationService.SendAccountSuspendedEmailAsync(user);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, $"Error al enviar notificación de suspensión al usuario {user.Email}");
+                        }
+                    }
+                    else if (user.UserStatus == UserStatus.Active)
+                    {
+                        try
+                        {
+                            await _userNotificationService.SendAccountActivatedEmailAsync(user);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, $"Error al enviar notificación de activación al usuario {user.Email}");
+                        }
+                    }
+                }
+
                 // Actualizar roles si se especifican
                 if (request.Roles != null && request.Roles.Any())
                 {
