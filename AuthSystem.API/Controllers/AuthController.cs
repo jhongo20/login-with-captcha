@@ -9,6 +9,7 @@ using AuthSystem.Domain.Interfaces.Services;
 using AuthSystem.Domain.Interfaces.Repositories;
 using AuthSystem.Domain.Models.Auth;
 using AuthSystem.Domain.Common.Enums;
+using AuthSystem.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -29,6 +30,7 @@ namespace AuthSystem.API.Controllers
         private readonly IAccountLockoutService _accountLockoutService;
         private readonly ILogger<AuthController> _logger;
         private readonly IConfiguration _configuration;
+        private readonly UserNotificationService _userNotificationService;
 
         /// <summary>
         /// Constructor
@@ -39,13 +41,15 @@ namespace AuthSystem.API.Controllers
         /// <param name="accountLockoutService">Servicio de bloqueo de cuentas</param>
         /// <param name="logger">Logger</param>
         /// <param name="configuration">Configuración</param>
+        /// <param name="userNotificationService">Servicio de notificaciones de usuario</param>
         public AuthController(
             IUnitOfWork unitOfWork,
             IJwtService jwtService,
             ICaptchaService captchaService,
             IAccountLockoutService accountLockoutService,
             ILogger<AuthController> logger,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            UserNotificationService userNotificationService)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _jwtService = jwtService ?? throw new ArgumentNullException(nameof(jwtService));
@@ -53,6 +57,7 @@ namespace AuthSystem.API.Controllers
             _accountLockoutService = accountLockoutService ?? throw new ArgumentNullException(nameof(accountLockoutService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            _userNotificationService = userNotificationService ?? throw new ArgumentNullException(nameof(userNotificationService));
         }
 
         /// <summary>
@@ -188,6 +193,22 @@ namespace AuthSystem.API.Controllers
                 {
                     _logger.LogError(ex, "Error al guardar los cambios en la base de datos durante el login");
                     // Continuamos con el proceso de login aunque haya un error al guardar el refresh token
+                }
+
+                // Enviar notificación de inicio de sesión
+                try
+                {
+                    // Obtener la dirección IP y el User-Agent del cliente
+                    string ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Desconocida";
+                    string userAgent = HttpContext.Request.Headers["User-Agent"].ToString();
+                    
+                    // Enviar la notificación de forma asíncrona (no esperamos a que termine)
+                    _ = _userNotificationService.SendLoginNotificationAsync(user, ipAddress, userAgent);
+                }
+                catch (Exception ex)
+                {
+                    // Registrar el error pero continuar con el proceso de login
+                    _logger.LogError(ex, "Error al enviar notificación de inicio de sesión para el usuario: {Username}", user.Username);
                 }
 
                 return Ok(new AuthResponse
@@ -374,6 +395,9 @@ namespace AuthSystem.API.Controllers
                                 Message = statusMessage
                             });
                         }
+                        
+                        // Guardar referencia al usuario para la notificación
+                        user = fullUser;
                     }
                 }
                 
@@ -385,7 +409,36 @@ namespace AuthSystem.API.Controllers
                     IsLdapUser = request.IsLdapUser
                 };
 
-                return await Login(loginRequest);
+                var response = await Login(loginRequest);
+
+                // Guardar los cambios en la base de datos para persistir la sesión
+                try
+                {
+                    await _unitOfWork.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error al guardar los cambios en la base de datos durante el login con Google reCAPTCHA");
+                    // Continuamos con el proceso de login aunque haya un error al guardar el refresh token
+                }
+
+                // Enviar notificación de inicio de sesión
+                try
+                {
+                    // Obtener la dirección IP y el User-Agent del cliente
+                    string ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Desconocida";
+                    string userAgent = HttpContext.Request.Headers["User-Agent"].ToString();
+                    
+                    // Enviar la notificación de forma asíncrona (no esperamos a que termine)
+                    _ = _userNotificationService.SendLoginNotificationAsync(user, ipAddress, userAgent);
+                }
+                catch (Exception ex)
+                {
+                    // Registrar el error pero continuar con el proceso de login
+                    _logger.LogError(ex, "Error al enviar notificación de inicio de sesión para el usuario: {Username}", user.Username);
+                }
+
+                return response;
             }
             catch (Exception ex)
             {
