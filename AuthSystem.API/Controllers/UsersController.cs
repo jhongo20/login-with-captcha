@@ -846,6 +846,16 @@ namespace AuthSystem.API.Controllers
                 await _unitOfWork.Users.UpdateAsync(user);
                 await _unitOfWork.SaveChangesAsync();
 
+                // Enviar notificación de actualización de cuenta
+                try
+                {
+                    await _userNotificationService.SendAccountUpdatedEmailAsync(user);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Error al enviar notificación de actualización al usuario {user.Email}");
+                }
+
                 // Obtener roles actualizados
                 var roles = await _unitOfWork.Roles.GetByUserAsync(id);
 
