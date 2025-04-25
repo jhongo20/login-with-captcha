@@ -243,6 +243,134 @@ if (user.PasswordChanged)
 }
 ```
 
+### Notificación de Actividad Inusual
+
+La notificación de actividad inusual se envía cuando se detecta actividad potencialmente sospechosa en la cuenta de un usuario. Esta notificación proporciona detalles sobre la actividad detectada y recomienda acciones de seguridad que el usuario puede tomar.
+
+#### Escenarios de Activación
+
+1. **Detección Automática**: El sistema puede detectar automáticamente patrones de actividad inusual, como:
+   - Inicios de sesión desde ubicaciones geográficas inusuales
+   - Múltiples inicios de sesión en un corto período de tiempo
+   - Acceso desde dispositivos no reconocidos
+   - Patrones de uso anormales
+
+2. **Reporte Manual**: Un administrador o oficial de seguridad puede reportar actividad inusual a través de:
+   - `POST /api/Security/{userId}/unusual-activity`
+   - `POST /api/Security/{userId}/detect-unusual-activity`
+
+#### Variables Específicas
+
+- `{{FullName}}`: Nombre completo del usuario.
+- `{{Email}}`: Correo electrónico del usuario.
+- `{{ActivityType}}`: Tipo de actividad inusual detectada.
+- `{{ActivityDate}}`: Fecha de la actividad.
+- `{{ActivityTime}}`: Hora de la actividad.
+- `{{IPAddress}}`: Dirección IP desde donde se realizó la actividad.
+- `{{Location}}`: Ubicación geográfica aproximada.
+- `{{Device}}`: Tipo de dispositivo utilizado.
+- `{{Browser}}`: Navegador utilizado.
+- `{{SecuritySettingsUrl}}`: URL para acceder a la configuración de seguridad.
+- `{{SupportEmail}}`: Correo electrónico de soporte.
+- `{{CurrentYear}}`: Año actual para el pie de página.
+
+#### Flujo de Implementación
+
+1. **Detección de Actividad Inusual**:
+   - El sistema detecta actividad potencialmente sospechosa o un administrador la reporta.
+   - Se captura la información relevante: tipo de actividad, IP, dispositivo, etc.
+   - Se llama al método `SendUnusualActivityEmailAsync` del `UserNotificationService`.
+
+2. **Envío de Notificación**:
+   - El servicio prepara los datos para la plantilla y llama al `EmailService` para enviar el correo.
+   - El usuario recibe un correo electrónico con detalles sobre la actividad y recomendaciones de seguridad.
+
+#### Código Relevante
+
+```csharp
+// En SecurityController.cs
+[HttpPost("{userId}/unusual-activity")]
+[Authorize(Roles = "Admin,SecurityOfficer")]
+public async Task<IActionResult> ReportUnusualActivity(Guid userId, [FromBody] ReportUnusualActivityRequest request)
+{
+    // Verificar si el usuario existe
+    var user = await _userRepository.GetByIdAsync(userId);
+    if (user == null)
+    {
+        return NotFound(new ErrorResponse { Message = "Usuario no encontrado" });
+    }
+
+    // Obtener información del cliente que reporta la actividad
+    string ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Desconocida";
+    string userAgent = HttpContext.Request.Headers["User-Agent"].ToString();
+
+    // Enviar notificación de actividad inusual
+    await _userNotificationService.SendUnusualActivityEmailAsync(
+        user,
+        request.ActivityType,
+        request.IPAddress ?? ipAddress,
+        request.UserAgent ?? userAgent,
+        request.Location);
+
+    // Registrar el evento en el log
+    _logger.LogWarning(
+        "Actividad inusual reportada para el usuario {UserId}: {ActivityType} desde {IPAddress}",
+        userId, request.ActivityType, request.IPAddress ?? ipAddress);
+
+    return Ok(new SuccessResponse { Message = "Notificación de actividad inusual enviada correctamente" });
+}
+```
+
+```csharp
+// En UserNotificationService.cs
+public async Task<bool> SendUnusualActivityEmailAsync(User user, string activityType, string ipAddress, string userAgent, string location = "Desconocida")
+{
+    try
+    {
+        // Extraer información del dispositivo y navegador del User-Agent
+        string device = DetermineDevice(userAgent);
+        string browser = DetermineBrowser(userAgent);
+        
+        // Obtener ubicación aproximada si no se proporcionó
+        if (location == "Desconocida" && !string.IsNullOrEmpty(ipAddress))
+        {
+            location = await GetLocationFromIpAsync(ipAddress);
+        }
+
+        // Fecha y hora actual
+        DateTime now = DateTime.Now;
+        string activityDate = now.ToString("dd/MM/yyyy");
+        string activityTime = now.ToString("HH:mm:ss");
+
+        var templateData = new Dictionary<string, string>
+        {
+            { "FullName", user.FullName },
+            { "Email", user.Email },
+            { "ActivityType", activityType },
+            { "ActivityDate", activityDate },
+            { "ActivityTime", activityTime },
+            { "IPAddress", ipAddress ?? "Desconocida" },
+            { "Location", location },
+            { "Device", device },
+            { "Browser", browser },
+            { "SecuritySettingsUrl", "/account/security" },
+            { "SupportEmail", "soporte@authsystem.com" },
+            { "CurrentYear", now.Year.ToString() }
+        };
+
+        return await _emailService.SendEmailAsync(
+            "UnusualActivity",
+            user.Email,
+            templateData);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error al enviar notificación de actividad inusual al usuario: {Email}", user.Email);
+        return false;
+    }
+}
+```
+
 ## Consideraciones Importantes
 
 1. **Formato de Variables**: Las variables en las plantillas deben usar el formato `{{NombreVariable}}` (dobles llaves).

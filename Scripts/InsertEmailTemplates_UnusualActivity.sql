@@ -67,35 +67,36 @@ INSERT INTO [dbo].[EmailTemplates]
         <h1>Alerta de Seguridad</h1>
     </div>
     <div class="content">
-        <p>Estimado/a <strong>{FullName}</strong>,</p>
+        <p>Estimado/a <strong>{{FullName}}</strong>,</p>
         
         <div class="alert">
             <p><strong>Hemos detectado actividad inusual en su cuenta.</strong></p>
         </div>
         
-        <p>Nuestro sistema de seguridad ha detectado actividad potencialmente sospechosa en su cuenta el <strong>{ActivityDate}</strong>.</p>
+        <p>Nuestro sistema de seguridad ha detectado actividad potencialmente sospechosa en su cuenta el <strong>{{ActivityDate}}</strong>.</p>
         
         <p><strong>Detalles de la actividad:</strong></p>
         <ul>
-            <li>Tipo de actividad: {ActivityType}</li>
-            <li>Fecha y hora: {ActivityDate}</li>
-            <li>Dirección IP: {IPAddress}</li>
-            <li>Ubicación: {Location}</li>
-            <li>Dispositivo: {Device}</li>
+            <li>Tipo de actividad: {{ActivityType}}</li>
+            <li>Fecha y hora: {{ActivityDate}} {{ActivityTime}}</li>
+            <li>Dirección IP: {{IPAddress}}</li>
+            <li>Ubicación: {{Location}}</li>
+            <li>Dispositivo: {{Device}}</li>
+            <li>Navegador: {{Browser}}</li>
         </ul>
         
         <p>Si reconoce esta actividad, puede ignorar este mensaje.</p>
         
-        <p>Si no reconoce esta actividad, le recomendamos que:</p>
+        <p>Si <strong>NO reconoce esta actividad</strong>, le recomendamos que:</p>
         <ol>
             <li>Cambie su contraseña inmediatamente</li>
             <li>Revise la actividad reciente de su cuenta</li>
             <li>Habilite la autenticación de dos factores si aún no lo ha hecho</li>
-            <li>Contacte a nuestro equipo de soporte</li>
+            <li>Contacte a nuestro equipo de soporte en {{SupportEmail}}</li>
         </ol>
         
         <p style="text-align: center; margin-top: 20px;">
-            <a href="{SecuritySettingsUrl}" class="button">Revisar configuración de seguridad</a>
+            <a href="{{SecuritySettingsUrl}}" class="button">Revisar configuración de seguridad</a>
         </p>
         
         <p>Atentamente,<br/>
@@ -103,36 +104,37 @@ INSERT INTO [dbo].[EmailTemplates]
     </div>
     <div class="footer">
         <p>Este es un mensaje automático, por favor no responda a este correo.</p>
-        <p>&copy; {CurrentYear} Sistema de Autenticación. Todos los derechos reservados.</p>
+        <p>&copy; {{CurrentYear}} Sistema de Autenticación. Todos los derechos reservados.</p>
     </div>
 </body>
 </html>'
-           ,'Estimado/a {FullName},
+           ,'Estimado/a {{FullName}},
 
 HEMOS DETECTADO ACTIVIDAD INUSUAL EN SU CUENTA.
 
-Nuestro sistema de seguridad ha detectado actividad potencialmente sospechosa en su cuenta el {ActivityDate}.
+Nuestro sistema de seguridad ha detectado actividad potencialmente sospechosa en su cuenta el {{ActivityDate}}.
 
 Detalles de la actividad:
-- Tipo de actividad: {ActivityType}
-- Fecha y hora: {ActivityDate}
-- Dirección IP: {IPAddress}
-- Ubicación: {Location}
-- Dispositivo: {Device}
+- Tipo de actividad: {{ActivityType}}
+- Fecha y hora: {{ActivityDate}} {{ActivityTime}}
+- Dirección IP: {{IPAddress}}
+- Ubicación: {{Location}}
+- Dispositivo: {{Device}}
+- Navegador: {{Browser}}
 
 Si reconoce esta actividad, puede ignorar este mensaje.
 
-Si no reconoce esta actividad, le recomendamos que:
+Si NO reconoce esta actividad, le recomendamos que:
 1. Cambie su contraseña inmediatamente
 2. Revise la actividad reciente de su cuenta
 3. Habilite la autenticación de dos factores si aún no lo ha hecho
-4. Contacte a nuestro equipo de soporte
+4. Contacte a nuestro equipo de soporte en {{SupportEmail}}
 
 Atentamente,
 El equipo de seguridad
 
 Este es un mensaje automático, por favor no responda a este correo.
-© {CurrentYear} Sistema de Autenticación. Todos los derechos reservados.'
+© {{CurrentYear}} Sistema de Autenticación. Todos los derechos reservados.'
            ,'Plantilla para notificar al usuario cuando se detecta actividad inusual en su cuenta'
            ,1
            ,GETDATE()

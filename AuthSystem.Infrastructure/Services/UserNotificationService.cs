@@ -220,46 +220,13 @@ namespace AuthSystem.Infrastructure.Services
             try
             {
                 // Extraer información del dispositivo y navegador del User-Agent
-                string device = "Dispositivo desconocido";
-                string browser = "Navegador desconocido";
-
-                if (!string.IsNullOrEmpty(userAgent))
+                string device = DetermineDevice(userAgent);
+                string browser = DetermineBrowser(userAgent);
+                
+                // Obtener ubicación aproximada si no se proporcionó
+                if (location == "Desconocida" && !string.IsNullOrEmpty(ipAddress))
                 {
-                    // Lógica simple para detectar dispositivo y navegador
-                    if (userAgent.Contains("Mobile") || userAgent.Contains("Android") || userAgent.Contains("iPhone"))
-                    {
-                        device = "Dispositivo móvil";
-                    }
-                    else if (userAgent.Contains("Tablet") || userAgent.Contains("iPad"))
-                    {
-                        device = "Tablet";
-                    }
-                    else
-                    {
-                        device = "Computadora";
-                    }
-
-                    // Detectar navegador
-                    if (userAgent.Contains("Chrome"))
-                    {
-                        browser = "Google Chrome";
-                    }
-                    else if (userAgent.Contains("Firefox"))
-                    {
-                        browser = "Mozilla Firefox";
-                    }
-                    else if (userAgent.Contains("Safari") && !userAgent.Contains("Chrome"))
-                    {
-                        browser = "Safari";
-                    }
-                    else if (userAgent.Contains("Edge"))
-                    {
-                        browser = "Microsoft Edge";
-                    }
-                    else if (userAgent.Contains("MSIE") || userAgent.Contains("Trident"))
-                    {
-                        browser = "Internet Explorer";
-                    }
+                    location = await GetLocationFromIpAsync(ipAddress);
                 }
 
                 var templateData = new Dictionary<string, string>
@@ -299,46 +266,13 @@ namespace AuthSystem.Infrastructure.Services
             try
             {
                 // Extraer información del dispositivo y navegador del User-Agent
-                string device = "Dispositivo desconocido";
-                string browser = "Navegador desconocido";
-
-                if (!string.IsNullOrEmpty(userAgent))
+                string device = DetermineDevice(userAgent);
+                string browser = DetermineBrowser(userAgent);
+                
+                // Obtener ubicación aproximada si no se proporcionó
+                if (location == "Desconocida" && !string.IsNullOrEmpty(ipAddress))
                 {
-                    // Lógica simple para detectar dispositivo y navegador
-                    if (userAgent.Contains("Mobile") || userAgent.Contains("Android") || userAgent.Contains("iPhone"))
-                    {
-                        device = "Dispositivo móvil";
-                    }
-                    else if (userAgent.Contains("Tablet") || userAgent.Contains("iPad"))
-                    {
-                        device = "Tablet";
-                    }
-                    else
-                    {
-                        device = "Computadora";
-                    }
-
-                    // Detectar navegador
-                    if (userAgent.Contains("Chrome"))
-                    {
-                        browser = "Google Chrome";
-                    }
-                    else if (userAgent.Contains("Firefox"))
-                    {
-                        browser = "Mozilla Firefox";
-                    }
-                    else if (userAgent.Contains("Safari") && !userAgent.Contains("Chrome"))
-                    {
-                        browser = "Safari";
-                    }
-                    else if (userAgent.Contains("Edge"))
-                    {
-                        browser = "Microsoft Edge";
-                    }
-                    else if (userAgent.Contains("MSIE") || userAgent.Contains("Trident"))
-                    {
-                        browser = "Internet Explorer";
-                    }
+                    location = await GetLocationFromIpAsync(ipAddress);
                 }
 
                 var templateData = new Dictionary<string, string>
@@ -381,64 +315,18 @@ namespace AuthSystem.Infrastructure.Services
             try
             {
                 // Extraer información del dispositivo y navegador del User-Agent
-                string device = "Dispositivo desconocido";
-                string browser = "Navegador desconocido";
-
-                if (!string.IsNullOrEmpty(userAgent))
+                string device = DetermineDevice(userAgent);
+                string browser = DetermineBrowser(userAgent);
+                
+                // Obtener ubicación aproximada si no se proporcionó
+                if (location == "Desconocida" && !string.IsNullOrEmpty(ipAddress))
                 {
-                    // Lógica simple para detectar dispositivo y navegador
-                    if (userAgent.Contains("Mobile") || userAgent.Contains("Android") || userAgent.Contains("iPhone"))
-                    {
-                        device = "Dispositivo móvil";
-                    }
-                    else if (userAgent.Contains("Tablet") || userAgent.Contains("iPad"))
-                    {
-                        device = "Tablet";
-                    }
-                    else
-                    {
-                        device = "Computadora";
-                    }
-
-                    // Detectar navegador
-                    if (userAgent.Contains("Chrome"))
-                    {
-                        browser = "Google Chrome";
-                    }
-                    else if (userAgent.Contains("Firefox"))
-                    {
-                        browser = "Mozilla Firefox";
-                    }
-                    else if (userAgent.Contains("Safari") && !userAgent.Contains("Chrome"))
-                    {
-                        browser = "Safari";
-                    }
-                    else if (userAgent.Contains("Edge"))
-                    {
-                        browser = "Microsoft Edge";
-                    }
-                    else if (userAgent.Contains("MSIE") || userAgent.Contains("Trident"))
-                    {
-                        browser = "Internet Explorer";
-                    }
+                    location = await GetLocationFromIpAsync(ipAddress);
                 }
 
                 // Calcular la duración del bloqueo
                 TimeSpan lockoutDuration = lockoutEnd - DateTime.Now;
-                string formattedDuration;
-
-                if (lockoutDuration.TotalMinutes < 60)
-                {
-                    formattedDuration = $"{Math.Ceiling(lockoutDuration.TotalMinutes)} minutos";
-                }
-                else if (lockoutDuration.TotalHours < 24)
-                {
-                    formattedDuration = $"{Math.Ceiling(lockoutDuration.TotalHours)} horas";
-                }
-                else
-                {
-                    formattedDuration = $"{Math.Ceiling(lockoutDuration.TotalDays)} días";
-                }
+                string formattedDuration = FormatTimeSpan(lockoutDuration);
 
                 var templateData = new Dictionary<string, string>
                 {
@@ -466,6 +354,131 @@ namespace AuthSystem.Infrastructure.Services
                 _logger.LogError(ex, "Error al enviar notificación de cuenta bloqueada al usuario: {Email}", user.Email);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Envía una notificación de actividad inusual al usuario
+        /// </summary>
+        /// <param name="user">Usuario</param>
+        /// <param name="activityType">Tipo de actividad inusual detectada</param>
+        /// <param name="ipAddress">Dirección IP desde donde se realizó la actividad</param>
+        /// <param name="userAgent">User-Agent del navegador</param>
+        /// <param name="location">Ubicación geográfica aproximada (opcional)</param>
+        /// <returns>True si el correo se envió correctamente, False en caso contrario</returns>
+        public async Task<bool> SendUnusualActivityEmailAsync(User user, string activityType, string ipAddress, string userAgent, string location = "Desconocida")
+        {
+            try
+            {
+                // Extraer información del dispositivo y navegador del User-Agent
+                string device = DetermineDevice(userAgent);
+                string browser = DetermineBrowser(userAgent);
+                
+                // Obtener ubicación aproximada si no se proporcionó
+                if (location == "Desconocida" && !string.IsNullOrEmpty(ipAddress))
+                {
+                    location = await GetLocationFromIpAsync(ipAddress);
+                }
+
+                // Fecha y hora actual
+                DateTime now = DateTime.Now;
+                string activityDate = now.ToString("dd/MM/yyyy");
+                string activityTime = now.ToString("HH:mm:ss");
+
+                var templateData = new Dictionary<string, string>
+                {
+                    { "FullName", user.FullName },
+                    { "Email", user.Email },
+                    { "ActivityType", activityType },
+                    { "ActivityDate", activityDate },
+                    { "ActivityTime", activityTime },
+                    { "IPAddress", ipAddress ?? "Desconocida" },
+                    { "Location", location },
+                    { "Device", device },
+                    { "Browser", browser },
+                    { "SecuritySettingsUrl", "/account/security" }, // Ajustar según la URL real
+                    { "SupportEmail", "soporte@authsystem.com" }, // Ajustar según el correo real de soporte
+                    { "CurrentYear", now.Year.ToString() }
+                };
+
+                return await _emailService.SendEmailAsync(
+                    "UnusualActivity",
+                    user.Email,
+                    templateData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al enviar notificación de actividad inusual al usuario: {Email}", user.Email);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Determina el tipo de dispositivo a partir del User-Agent
+        /// </summary>
+        /// <param name="userAgent">User-Agent del navegador</param>
+        /// <returns>Tipo de dispositivo</returns>
+        private string DetermineDevice(string userAgent)
+        {
+            if (string.IsNullOrEmpty(userAgent))
+                return "Dispositivo desconocido";
+
+            if (userAgent.Contains("Mobile") || userAgent.Contains("Android") || userAgent.Contains("iPhone"))
+                return "Dispositivo móvil";
+            else if (userAgent.Contains("Tablet") || userAgent.Contains("iPad"))
+                return "Tablet";
+            else
+                return "Computadora";
+        }
+
+        /// <summary>
+        /// Determina el navegador a partir del User-Agent
+        /// </summary>
+        /// <param name="userAgent">User-Agent del navegador</param>
+        /// <returns>Nombre del navegador</returns>
+        private string DetermineBrowser(string userAgent)
+        {
+            if (string.IsNullOrEmpty(userAgent))
+                return "Navegador desconocido";
+
+            if (userAgent.Contains("Chrome") && !userAgent.Contains("Edg"))
+                return "Google Chrome";
+            else if (userAgent.Contains("Firefox"))
+                return "Mozilla Firefox";
+            else if (userAgent.Contains("Safari") && !userAgent.Contains("Chrome"))
+                return "Safari";
+            else if (userAgent.Contains("Edg"))
+                return "Microsoft Edge";
+            else if (userAgent.Contains("MSIE") || userAgent.Contains("Trident"))
+                return "Internet Explorer";
+            else
+                return "Navegador desconocido";
+        }
+
+        /// <summary>
+        /// Obtiene la ubicación aproximada a partir de una dirección IP
+        /// </summary>
+        /// <param name="ipAddress">Dirección IP</param>
+        /// <returns>Ubicación aproximada</returns>
+        private async Task<string> GetLocationFromIpAsync(string ipAddress)
+        {
+            // Implementación básica - en un entorno real, se utilizaría un servicio de geolocalización
+            // como MaxMind GeoIP, ipstack, ipinfo.io, etc.
+            return "Desconocida";
+        }
+
+        /// <summary>
+        /// Formatea un TimeSpan en un formato legible
+        /// </summary>
+        /// <param name="timeSpan">TimeSpan a formatear</param>
+        /// <returns>Formato legible</returns>
+        private string FormatTimeSpan(TimeSpan timeSpan)
+        {
+            if (timeSpan.TotalMinutes < 60)
+                return $"{Math.Ceiling(timeSpan.TotalMinutes)} minutos";
+            else if (timeSpan.TotalHours < 24)
+                return $"{Math.Ceiling(timeSpan.TotalHours)} horas";
+            else
+                return $"{Math.Ceiling(timeSpan.TotalDays)} días";
         }
     }
 }
