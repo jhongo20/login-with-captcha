@@ -618,6 +618,204 @@ namespace AuthSystem.API.Controllers
         }
 
         /// <summary>
+        /// Solicita el restablecimiento de contraseña para un usuario
+        /// </summary>
+        /// <param name="request">Datos de solicitud de restablecimiento</param>
+        /// <returns>Respuesta de éxito</returns>
+        [HttpPost("request-password-reset")]
+        [ProducesResponseType(typeof(SuccessResponse), 200)]
+        [ProducesResponseType(typeof(ErrorResponse), 400)]
+        [ProducesResponseType(typeof(ErrorResponse), 404)]
+        [ProducesResponseType(typeof(ErrorResponse), 500)]
+        public async Task<IActionResult> RequestPasswordReset([FromBody] PasswordResetRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Solicitud de restablecimiento de contraseña para el correo: {Email}", request.Email);
+
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("Modelo inválido para solicitud de restablecimiento de contraseña");
+                    return BadRequest(new ErrorResponse
+                    {
+                        Message = "Datos de solicitud inválidos",
+                        Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()
+                    });
+                }
+
+                // Buscar el usuario por correo electrónico
+                var userRepository = _unitOfWork.Users as IUserRepository;
+                if (userRepository == null)
+                {
+                    _logger.LogError("No se pudo obtener el repositorio de usuarios");
+                    return StatusCode(500, new ErrorResponse
+                    {
+                        Message = "Error interno del servidor"
+                    });
+                }
+
+                var user = await userRepository.GetByEmailAsync(request.Email);
+                if (user == null)
+                {
+                    // Por seguridad, no revelamos si el correo existe o no
+                    _logger.LogWarning("Intento de restablecimiento de contraseña para un correo no registrado: {Email}", request.Email);
+                    return Ok(new SuccessResponse
+                    {
+                        Message = "Si el correo electrónico está registrado, recibirás instrucciones para restablecer tu contraseña"
+                    });
+                }
+
+                // Verificar si el usuario está activo
+                if (user.UserStatus != UserStatus.Active)
+                {
+                    _logger.LogWarning("Intento de restablecimiento de contraseña para un usuario no activo: {Email}", request.Email);
+                    return Ok(new SuccessResponse
+                    {
+                        Message = "Si el correo electrónico está registrado, recibirás instrucciones para restablecer tu contraseña"
+                    });
+                }
+
+                // Generar token de restablecimiento
+                var passwordResetService = HttpContext.RequestServices.GetService(typeof(IPasswordResetService)) as IPasswordResetService;
+                if (passwordResetService == null)
+                {
+                    _logger.LogError("No se pudo obtener el servicio de restablecimiento de contraseña");
+                    return StatusCode(500, new ErrorResponse
+                    {
+                        Message = "Error interno del servidor"
+                    });
+                }
+
+                var token = await passwordResetService.GenerateResetTokenAsync(user);
+
+                // Construir la URL de restablecimiento
+                var baseUrl = _configuration["AppSettings:FrontendBaseUrl"] ?? "http://localhost:3000";
+                var resetUrl = $"{baseUrl}/reset-password?token={token}&email={Uri.EscapeDataString(user.Email)}";
+
+                // Enviar correo electrónico con el enlace de restablecimiento
+                await _userNotificationService.SendPasswordResetEmailAsync(user, token, resetUrl);
+
+                return Ok(new SuccessResponse
+                {
+                    Message = "Si el correo electrónico está registrado, recibirás instrucciones para restablecer tu contraseña"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al procesar la solicitud de restablecimiento de contraseña");
+                return StatusCode(500, new ErrorResponse
+                {
+                    Message = "Error al procesar la solicitud de restablecimiento de contraseña"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Confirma el restablecimiento de contraseña para un usuario
+        /// </summary>
+        /// <param name="request">Datos de confirmación de restablecimiento</param>
+        /// <returns>Respuesta de éxito</returns>
+        [HttpPost("confirm-password-reset")]
+        [ProducesResponseType(typeof(SuccessResponse), 200)]
+        [ProducesResponseType(typeof(ErrorResponse), 400)]
+        [ProducesResponseType(typeof(ErrorResponse), 404)]
+        [ProducesResponseType(typeof(ErrorResponse), 500)]
+        public async Task<IActionResult> ConfirmPasswordReset([FromBody] ConfirmPasswordResetRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Confirmación de restablecimiento de contraseña para el correo: {Email}", request.Email);
+
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("Modelo inválido para confirmación de restablecimiento de contraseña");
+                    return BadRequest(new ErrorResponse
+                    {
+                        Message = "Datos de confirmación inválidos",
+                        Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()
+                    });
+                }
+
+                // Buscar el usuario por correo electrónico
+                var userRepository = _unitOfWork.Users as IUserRepository;
+                if (userRepository == null)
+                {
+                    _logger.LogError("No se pudo obtener el repositorio de usuarios");
+                    return StatusCode(500, new ErrorResponse
+                    {
+                        Message = "Error interno del servidor"
+                    });
+                }
+
+                var user = await userRepository.GetByEmailAsync(request.Email);
+                if (user == null)
+                {
+                    _logger.LogWarning("Intento de confirmación de restablecimiento de contraseña para un correo no registrado: {Email}", request.Email);
+                    return BadRequest(new ErrorResponse
+                    {
+                        Message = "Correo electrónico o token inválidos"
+                    });
+                }
+
+                // Verificar si el usuario está activo
+                if (user.UserStatus != UserStatus.Active)
+                {
+                    _logger.LogWarning("Intento de confirmación de restablecimiento de contraseña para un usuario no activo: {Email}", request.Email);
+                    return BadRequest(new ErrorResponse
+                    {
+                        Message = "Correo electrónico o token inválidos"
+                    });
+                }
+
+                // Validar y procesar el restablecimiento de contraseña
+                var passwordResetService = HttpContext.RequestServices.GetService(typeof(IPasswordResetService)) as IPasswordResetService;
+                if (passwordResetService == null)
+                {
+                    _logger.LogError("No se pudo obtener el servicio de restablecimiento de contraseña");
+                    return StatusCode(500, new ErrorResponse
+                    {
+                        Message = "Error interno del servidor"
+                    });
+                }
+
+                var success = await passwordResetService.ResetPasswordAsync(user, request.Token, request.NewPassword);
+                if (!success)
+                {
+                    _logger.LogWarning("Token inválido o expirado para el restablecimiento de contraseña: {Email}", request.Email);
+                    return BadRequest(new ErrorResponse
+                    {
+                        Message = "Token inválido o expirado"
+                    });
+                }
+
+                // Actualizar la fecha del último cambio de contraseña
+                user.LastPasswordChangeAt = DateTime.UtcNow;
+                await _unitOfWork.Users.UpdateAsync(user);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Obtener información del cliente para la notificación
+                string ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Desconocida";
+                string userAgent = HttpContext.Request.Headers["User-Agent"].ToString();
+                
+                // Enviar notificación de cambio de contraseña
+                await _userNotificationService.SendPasswordChangedEmailAsync(user, ipAddress, userAgent);
+
+                return Ok(new SuccessResponse
+                {
+                    Message = "Contraseña restablecida correctamente"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al procesar la confirmación de restablecimiento de contraseña");
+                return StatusCode(500, new ErrorResponse
+                {
+                    Message = "Error al procesar la confirmación de restablecimiento de contraseña"
+                });
+            }
+        }
+
+        /// <summary>
         /// Obtiene un CAPTCHA para el inicio de sesión
         /// </summary>
         /// <returns>Respuesta con la información del CAPTCHA</returns>

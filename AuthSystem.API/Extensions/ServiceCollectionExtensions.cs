@@ -59,6 +59,9 @@ namespace AuthSystem.API.Extensions
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<UserNotificationService>();
 
+            // Registrar servicio de restablecimiento de contraseña
+            services.AddScoped<IPasswordResetService, PasswordResetService>();
+
             // Registrar CaptchaService (sin HttpClientFactory)
             services.AddScoped<ICaptchaService, CaptchaService>();
 

@@ -285,5 +285,86 @@ namespace AuthSystem.Infrastructure.Services
                 return false;
             }
         }
+
+        /// <summary>
+        /// Envía una notificación de cambio de contraseña al usuario
+        /// </summary>
+        /// <param name="user">Usuario</param>
+        /// <param name="ipAddress">Dirección IP desde donde se realizó el cambio</param>
+        /// <param name="userAgent">User-Agent del navegador</param>
+        /// <param name="location">Ubicación geográfica aproximada (opcional)</param>
+        /// <returns>True si el correo se envió correctamente, False en caso contrario</returns>
+        public async Task<bool> SendPasswordChangedEmailAsync(User user, string ipAddress, string userAgent, string location = "Desconocida")
+        {
+            try
+            {
+                // Extraer información del dispositivo y navegador del User-Agent
+                string device = "Dispositivo desconocido";
+                string browser = "Navegador desconocido";
+
+                if (!string.IsNullOrEmpty(userAgent))
+                {
+                    // Lógica simple para detectar dispositivo y navegador
+                    if (userAgent.Contains("Mobile") || userAgent.Contains("Android") || userAgent.Contains("iPhone"))
+                    {
+                        device = "Dispositivo móvil";
+                    }
+                    else if (userAgent.Contains("Tablet") || userAgent.Contains("iPad"))
+                    {
+                        device = "Tablet";
+                    }
+                    else
+                    {
+                        device = "Computadora";
+                    }
+
+                    // Detectar navegador
+                    if (userAgent.Contains("Chrome"))
+                    {
+                        browser = "Google Chrome";
+                    }
+                    else if (userAgent.Contains("Firefox"))
+                    {
+                        browser = "Mozilla Firefox";
+                    }
+                    else if (userAgent.Contains("Safari") && !userAgent.Contains("Chrome"))
+                    {
+                        browser = "Safari";
+                    }
+                    else if (userAgent.Contains("Edge"))
+                    {
+                        browser = "Microsoft Edge";
+                    }
+                    else if (userAgent.Contains("MSIE") || userAgent.Contains("Trident"))
+                    {
+                        browser = "Internet Explorer";
+                    }
+                }
+
+                var templateData = new Dictionary<string, string>
+                {
+                    { "FullName", user.FullName },
+                    { "Email", user.Email },
+                    { "ChangeDate", DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") },
+                    { "IPAddress", ipAddress ?? "Desconocida" },
+                    { "Location", location },
+                    { "Device", device },
+                    { "Browser", browser },
+                    { "SecuritySettingsUrl", "/account/security" }, // Ajustar según la URL real
+                    { "SupportEmail", "soporte@authsystem.com" }, // Ajustar según el correo real de soporte
+                    { "CurrentYear", DateTime.Now.Year.ToString() }
+                };
+
+                return await _emailService.SendEmailAsync(
+                    "PasswordChanged",
+                    user.Email,
+                    templateData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al enviar notificación de cambio de contraseña al usuario: {Email}", user.Email);
+                return false;
+            }
+        }
     }
 }
