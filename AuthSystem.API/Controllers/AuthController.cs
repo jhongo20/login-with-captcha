@@ -153,6 +153,17 @@ namespace AuthSystem.API.Controllers
                     if (isLocked)
                     {
                         int remainingTime = await _accountLockoutService.GetRemainingLockoutTimeAsync(user.Id);
+                        
+                        // Obtener la fecha de desbloqueo
+                        DateTime lockoutEnd = DateTime.Now.AddSeconds(remainingTime);
+                        
+                        // Obtener la dirección IP y el User-Agent del cliente
+                        string ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Desconocida";
+                        string userAgent = HttpContext.Request.Headers["User-Agent"].ToString();
+                        
+                        // Enviar notificación de cuenta bloqueada de forma asíncrona (no esperamos a que termine)
+                        _ = _userNotificationService.SendAccountLockedEmailAsync(user, lockoutEnd, ipAddress, userAgent);
+                        
                         return StatusCode(403, new ErrorResponse
                         {
                             Message = $"La cuenta ha sido bloqueada debido a múltiples intentos fallidos. Intente nuevamente en {remainingTime / 60} minutos.",

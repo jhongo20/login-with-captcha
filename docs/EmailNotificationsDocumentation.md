@@ -101,37 +101,144 @@ catch (Exception ex)
 }
 ```
 
+### Notificación de Bloqueo de Cuenta
+
+La notificación de bloqueo de cuenta se envía cuando la cuenta de un usuario es bloqueada, ya sea automáticamente después de múltiples intentos fallidos de inicio de sesión o manualmente por un administrador. Esta notificación proporciona información detallada sobre el bloqueo y ofrece opciones para contactar a soporte.
+
+#### Escenarios de Activación
+
+1. **Bloqueo Automático**: Después de 5 intentos fallidos de inicio de sesión (configurable en `appsettings.json`).
+2. **Bloqueo Manual**: Cuando un administrador cambia el estado de un usuario a "Locked" a través de:
+   - `PUT /api/Users/{id}` (actualización general del usuario)
+   - `PATCH /api/Users/{id}/status` (actualización específica del estado)
+
+#### Variables Específicas
+
+- `{{FullName}}`: Nombre completo del usuario.
+- `{{Email}}`: Correo electrónico del usuario.
+- `{{LockoutDate}}`: Fecha y hora del bloqueo.
+- `{{LockoutDuration}}`: Duración del bloqueo (por ejemplo, "15 minutos", "1 hora", "24 horas").
+- `{{UnlockDate}}`: Fecha y hora de desbloqueo automático.
+- `{{IPAddress}}`: Dirección IP desde donde se realizaron los intentos.
+- `{{Location}}`: Ubicación geográfica aproximada.
+- `{{Device}}`: Tipo de dispositivo utilizado.
+- `{{Browser}}`: Navegador utilizado.
+- `{{ContactSupportUrl}}`: URL para contactar a soporte.
+- `{{SupportEmail}}`: Correo electrónico de soporte.
+- `{{CurrentYear}}`: Año actual para el pie de página.
+
+#### Flujo de Implementación
+
+1. **Bloqueo Automático**:
+   - El usuario realiza múltiples intentos fallidos de inicio de sesión.
+   - Al alcanzar el límite de intentos (5 por defecto), `AccountLockoutService.RecordFailedLoginAttemptAsync` retorna `true`.
+   - El controlador de autenticación captura la información del cliente y llama a `SendAccountLockedEmailAsync`.
+
+2. **Bloqueo Manual**:
+   - Un administrador cambia el estado del usuario a "Locked".
+   - El controlador de usuarios captura la información del cliente y llama a `SendAccountLockedEmailAsync`.
+
+#### Código Relevante
+
 ```csharp
-// En UserNotificationService.cs
-public async Task<bool> SendLoginNotificationAsync(User user, string ipAddress, string userAgent, string location = "Desconocida")
+// En AuthController.cs (bloqueo automático)
+if (isLocked)
+{
+    int remainingTime = await _accountLockoutService.GetRemainingLockoutTimeAsync(user.Id);
+    
+    // Obtener la fecha de desbloqueo
+    DateTime lockoutEnd = DateTime.Now.AddSeconds(remainingTime);
+    
+    // Obtener la dirección IP y el User-Agent del cliente
+    string ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Desconocida";
+    string userAgent = HttpContext.Request.Headers["User-Agent"].ToString();
+    
+    // Enviar notificación de cuenta bloqueada
+    _ = _userNotificationService.SendAccountLockedEmailAsync(user, lockoutEnd, ipAddress, userAgent);
+    
+    return StatusCode(403, new ErrorResponse
+    {
+        Message = $"La cuenta ha sido bloqueada debido a múltiples intentos fallidos. Intente nuevamente en {remainingTime / 60} minutos.",
+        LockoutRemainingSeconds = remainingTime
+    });
+}
+```
+
+```csharp
+// En UsersController.cs (bloqueo manual)
+if (user.UserStatus == UserStatus.Locked)
 {
     try
     {
-        // Extraer información del dispositivo y navegador del User-Agent
-        string device = DetermineDevice(userAgent);
-        string browser = DetermineBrowser(userAgent);
-
-        var templateData = new Dictionary<string, string>
-        {
-            { "FullName", user.FullName },
-            { "LoginDate", DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") },
-            { "IPAddress", ipAddress ?? "Desconocida" },
-            { "Location", location },
-            { "Device", device },
-            { "Browser", browser },
-            { "SecuritySettingsUrl", "/account/security" },
-            { "CurrentYear", DateTime.Now.Year.ToString() }
-        };
-
-        return await _emailService.SendEmailAsync(
-            "LoginNotification",
-            user.Email,
-            templateData);
+        // Establecer un tiempo de bloqueo (por ejemplo, 24 horas)
+        DateTime lockoutEnd = DateTime.Now.AddHours(24);
+        
+        // Actualizar el LockoutEnd del usuario
+        user.LockoutEnd = lockoutEnd;
+        
+        // Obtener la dirección IP y el User-Agent del cliente
+        string ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Desconocida";
+        string userAgent = HttpContext.Request.Headers["User-Agent"].ToString();
+        
+        // Enviar notificación de cuenta bloqueada
+        await _userNotificationService.SendAccountLockedEmailAsync(user, lockoutEnd, ipAddress, userAgent);
     }
     catch (Exception ex)
     {
-        _logger.LogError(ex, "Error al enviar notificación de inicio de sesión al usuario: {Email}", user.Email);
-        return false;
+        _logger.LogError(ex, $"Error al enviar notificación de bloqueo al usuario {user.Email}");
+    }
+}
+```
+
+### Notificación de Cambio de Contraseña
+
+La notificación de cambio de contraseña se envía cuando un usuario cambia su contraseña exitosamente. Esta notificación proporciona información detallada sobre el cambio y ofrece opciones para contactar a soporte.
+
+#### Escenarios de Activación
+
+1. **Cambio de Contraseña**: Después de que un usuario cambie su contraseña a través de:
+   - `PUT /api/Users/{id}/password` (actualización de la contraseña del usuario)
+
+#### Variables Específicas
+
+- `{{FullName}}`: Nombre completo del usuario.
+- `{{Email}}`: Correo electrónico del usuario.
+- `{{PasswordChangedDate}}`: Fecha y hora del cambio de contraseña.
+- `{{IPAddress}}`: Dirección IP desde donde se realizó el cambio.
+- `{{Location}}`: Ubicación geográfica aproximada.
+- `{{Device}}`: Tipo de dispositivo utilizado.
+- `{{Browser}}`: Navegador utilizado.
+- `{{ContactSupportUrl}}`: URL para contactar a soporte.
+- `{{SupportEmail}}`: Correo electrónico de soporte.
+- `{{CurrentYear}}`: Año actual para el pie de página.
+
+#### Flujo de Implementación
+
+1. **Cambio de Contraseña**:
+   - El usuario cambia su contraseña a través de `/api/Users/{id}/password`.
+   - El controlador de usuarios captura la información del cliente y llama a `SendPasswordChangedEmailAsync`.
+
+#### Código Relevante
+
+```csharp
+// En UsersController.cs (cambio de contraseña)
+if (user.PasswordChanged)
+{
+    try
+    {
+        // Obtener la fecha de cambio de contraseña
+        DateTime passwordChangedDate = DateTime.Now;
+        
+        // Obtener la dirección IP y el User-Agent del cliente
+        string ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Desconocida";
+        string userAgent = HttpContext.Request.Headers["User-Agent"].ToString();
+        
+        // Enviar notificación de cambio de contraseña
+        await _userNotificationService.SendPasswordChangedEmailAsync(user, passwordChangedDate, ipAddress, userAgent);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, $"Error al enviar notificación de cambio de contraseña al usuario {user.Email}");
     }
 }
 ```

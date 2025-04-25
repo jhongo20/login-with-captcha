@@ -789,6 +789,28 @@ namespace AuthSystem.API.Controllers
                             _logger.LogError(ex, $"Error al enviar notificación de activación al usuario {user.Email}");
                         }
                     }
+                    else if (user.UserStatus == UserStatus.Locked)
+                    {
+                        try
+                        {
+                            // Establecer un tiempo de bloqueo (por ejemplo, 24 horas)
+                            DateTime lockoutEnd = DateTime.Now.AddHours(24);
+                            
+                            // Actualizar el LockoutEnd del usuario
+                            user.LockoutEnd = lockoutEnd;
+                            
+                            // Obtener la dirección IP y el User-Agent del cliente
+                            string ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Desconocida";
+                            string userAgent = HttpContext.Request.Headers["User-Agent"].ToString();
+                            
+                            // Enviar notificación de cuenta bloqueada
+                            await _userNotificationService.SendAccountLockedEmailAsync(user, lockoutEnd, ipAddress, userAgent);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, $"Error al enviar notificación de bloqueo al usuario {user.Email}");
+                        }
+                    }
                 }
 
                 // Actualizar roles si se especifican
@@ -933,13 +955,30 @@ namespace AuthSystem.API.Controllers
                 await _unitOfWork.SaveChangesAsync();
 
                 // Enviar notificación al usuario según el cambio de estado
-                if (request.Status == UserStatus.Suspended || request.Status == UserStatus.Locked)
+                if (request.Status == UserStatus.Suspended)
                 {
                     await _userNotificationService.SendAccountSuspendedEmailAsync(user);
                 }
                 else if (request.Status == UserStatus.Active)
                 {
                     await _userNotificationService.SendAccountActivatedEmailAsync(user);
+                }
+                else if (request.Status == UserStatus.Locked)
+                {
+                    // Establecer un tiempo de bloqueo (por ejemplo, 24 horas)
+                    DateTime lockoutEnd = DateTime.Now.AddHours(24);
+                    
+                    // Actualizar el LockoutEnd del usuario
+                    user.LockoutEnd = lockoutEnd;
+                    await _unitOfWork.Users.UpdateAsync(user);
+                    await _unitOfWork.SaveChangesAsync();
+                    
+                    // Obtener la dirección IP y el User-Agent del cliente
+                    string ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Desconocida";
+                    string userAgent = HttpContext.Request.Headers["User-Agent"].ToString();
+                    
+                    // Enviar notificación de cuenta bloqueada
+                    await _userNotificationService.SendAccountLockedEmailAsync(user, lockoutEnd, ipAddress, userAgent);
                 }
 
                 return Ok(new SuccessResponse

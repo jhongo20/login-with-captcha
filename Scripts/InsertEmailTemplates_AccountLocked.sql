@@ -1,21 +1,7 @@
 -- Template para notificación de cuenta bloqueada
-INSERT INTO [dbo].[EmailTemplates]
-           ([Id]
-           ,[Name]
-           ,[Subject]
-           ,[HtmlContent]
-           ,[TextContent]
-           ,[Description]
-           ,[IsActive]
-           ,[CreatedAt]
-           ,[CreatedBy]
-           ,[LastModifiedAt]
-           ,[LastModifiedBy])
-     VALUES
-           (NEWID()
-           ,'AccountLocked'
-           ,'Su cuenta ha sido bloqueada temporalmente'
-           ,'<!DOCTYPE html>
+UPDATE [dbo].[EmailTemplates]
+SET [Subject] = 'Su cuenta ha sido bloqueada temporalmente',
+    [HtmlContent] = '<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8" />
@@ -67,7 +53,7 @@ INSERT INTO [dbo].[EmailTemplates]
         <h1>Cuenta Bloqueada</h1>
     </div>
     <div class="content">
-        <p>Estimado/a <strong>{FullName}</strong>,</p>
+        <p>Estimado/a <strong>{{FullName}}</strong>,</p>
         
         <div class="alert">
             <p><strong>Su cuenta ha sido bloqueada temporalmente debido a múltiples intentos fallidos de inicio de sesión.</strong></p>
@@ -77,9 +63,11 @@ INSERT INTO [dbo].[EmailTemplates]
         
         <p><strong>Detalles del bloqueo:</strong></p>
         <ul>
-            <li>Fecha y hora del bloqueo: {LockoutDate}</li>
-            <li>Duración del bloqueo: {LockoutDuration}</li>
-            <li>Su cuenta será desbloqueada automáticamente el: {UnlockDate}</li>
+            <li>Fecha y hora del bloqueo: {{LockoutDate}}</li>
+            <li>Duración del bloqueo: {{LockoutDuration}}</li>
+            <li>Su cuenta será desbloqueada automáticamente el: {{UnlockDate}}</li>
+            <li>Dirección IP: {{IPAddress}}</li>
+            <li>Ubicación aproximada: {{Location}}</li>
         </ul>
         
         <p>Si fue usted quien intentó iniciar sesión y olvidó su contraseña, puede solicitar un restablecimiento de contraseña una vez que su cuenta sea desbloqueada.</p>
@@ -87,45 +75,45 @@ INSERT INTO [dbo].[EmailTemplates]
         <p>Si no reconoce estos intentos de inicio de sesión, es posible que alguien esté intentando acceder a su cuenta. Le recomendamos que cambie su contraseña tan pronto como su cuenta sea desbloqueada.</p>
         
         <p style="text-align: center; margin-top: 20px;">
-            <a href="{ContactSupportUrl}" class="button">Contactar a Soporte</a>
+            <a href="{{ContactSupportUrl}}" class="button">Contactar a Soporte</a>
         </p>
         
-        <p>Si necesita asistencia inmediata, por favor contacte a nuestro equipo de soporte.</p>
+        <p>Si necesita asistencia inmediata, por favor contacte a nuestro equipo de soporte en <a href="mailto:{{SupportEmail}}">{{SupportEmail}}</a>.</p>
         
         <p>Atentamente,<br/>
         El equipo de seguridad</p>
     </div>
     <div class="footer">
         <p>Este es un mensaje automático, por favor no responda a este correo.</p>
-        <p>&copy; {CurrentYear} Sistema de Autenticación. Todos los derechos reservados.</p>
+        <p>&copy; {{CurrentYear}} Sistema de Autenticación. Todos los derechos reservados.</p>
     </div>
 </body>
-</html>'
-           ,'Estimado/a {FullName},
+</html>',
+    [TextContent] = 'Estimado/a {{FullName}},
 
 SU CUENTA HA SIDO BLOQUEADA TEMPORALMENTE DEBIDO A MÚLTIPLES INTENTOS FALLIDOS DE INICIO DE SESIÓN.
 
 Hemos detectado varios intentos fallidos de inicio de sesión en su cuenta, lo que ha activado nuestro sistema de seguridad. Esta medida es para proteger su cuenta contra accesos no autorizados.
 
 Detalles del bloqueo:
-- Fecha y hora del bloqueo: {LockoutDate}
-- Duración del bloqueo: {LockoutDuration}
-- Su cuenta será desbloqueada automáticamente el: {UnlockDate}
+- Fecha y hora del bloqueo: {{LockoutDate}}
+- Duración del bloqueo: {{LockoutDuration}}
+- Su cuenta será desbloqueada automáticamente el: {{UnlockDate}}
+- Dirección IP: {{IPAddress}}
+- Ubicación aproximada: {{Location}}
 
 Si fue usted quien intentó iniciar sesión y olvidó su contraseña, puede solicitar un restablecimiento de contraseña una vez que su cuenta sea desbloqueada.
 
 Si no reconoce estos intentos de inicio de sesión, es posible que alguien esté intentando acceder a su cuenta. Le recomendamos que cambie su contraseña tan pronto como su cuenta sea desbloqueada.
 
-Si necesita asistencia inmediata, por favor contacte a nuestro equipo de soporte.
+Si necesita asistencia inmediata, por favor contacte a nuestro equipo de soporte en {{SupportEmail}}.
 
 Atentamente,
 El equipo de seguridad
 
 Este es un mensaje automático, por favor no responda a este correo.
-© {CurrentYear} Sistema de Autenticación. Todos los derechos reservados.'
-           ,'Plantilla para notificar al usuario cuando su cuenta ha sido bloqueada temporalmente debido a múltiples intentos fallidos de inicio de sesión'
-           ,1
-           ,GETDATE()
-           ,'System'
-           ,GETDATE()
-           ,'System');
+© {{CurrentYear}} Sistema de Autenticación. Todos los derechos reservados.',
+    [Description] = 'Plantilla para notificar al usuario cuando su cuenta ha sido bloqueada temporalmente debido a múltiples intentos fallidos de inicio de sesión',
+    [LastModifiedAt] = GETDATE(),
+    [LastModifiedBy] = 'System'
+WHERE [Name] = 'AccountLocked';
